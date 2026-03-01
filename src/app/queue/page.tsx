@@ -78,6 +78,17 @@ export default function QueuePage() {
     }
   };
 
+  const handleGenerateFormat = async (endpoint: string) => {
+    setGenerating(true);
+    try {
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+      if (res.ok) { setFilter('pending_review'); await fetchPosts('pending_review'); }
+      else { const err = await res.json().catch(() => ({})); alert('Generation failed: ' + (err.error || 'Unknown')); }
+    } finally { setGenerating(false); }
+  };
+  const handleGenerateTips = () => handleGenerateFormat('/api/generate-tips');
+  const handleGenerateMyth = () => handleGenerateFormat('/api/generate-myth');
+
   const handleApprove = async (id: string) => {
     setActionLoading(id + '-approve');
     await fetch('/api/approve', {
@@ -164,13 +175,29 @@ export default function QueuePage() {
             <a href="/settings" className="text-gray-400 hover:text-white transition">Settings</a>
           </nav>
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="bg-[#4D9EFF] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {generating ? <><span className="animate-spin">⏳</span> Generating...</> : '+ Generate Post'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition disabled:opacity-50 flex items-center gap-2"
+          >
+            {generating ? '⏳' : '+'} Before/After
+          </button>
+          <button
+            onClick={handleGenerateTips}
+            disabled={generating}
+            className="bg-[#4D9EFF22] border border-[#4D9EFF55] text-[#4D9EFF] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#4D9EFF33] transition disabled:opacity-50"
+          >
+            + Tip List
+          </button>
+          <button
+            onClick={handleGenerateMyth}
+            disabled={generating}
+            className="bg-[#FF2D7822] border border-[#FF2D7855] text-[#FF2D78] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#FF2D7833] transition disabled:opacity-50"
+          >
+            + Myth Bust
+          </button>
+        </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-8 py-6">
@@ -218,7 +245,13 @@ export default function QueuePage() {
                     <span className={`text-xs px-2 py-1 rounded-full font-medium border shrink-0 ${STATUS_COLORS[post.status] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
                       {STATUS_LABELS[post.status] || post.status}
                     </span>
-                    <span className="text-xs bg-[#4D9EFF15] text-[#4D9EFF] px-2 py-1 rounded border border-[#4D9EFF25] shrink-0">{post.category}</span>
+                    <span className={`text-xs px-2 py-1 rounded border shrink-0 ${
+                      post.format === 'tip_list' ? 'bg-purple-900/40 text-purple-400 border-purple-800' :
+                      post.format === 'myth_bust' ? 'bg-orange-900/40 text-orange-400 border-orange-800' :
+                      'bg-[#4D9EFF15] text-[#4D9EFF] border-[#4D9EFF25]'
+                    }`}>
+                      {post.format === 'tip_list' ? '📋 Tip List' : post.format === 'myth_bust' ? '💥 Myth Bust' : '↕ Before/After'}
+                    </span>
                     <span className="text-gray-500 text-xs font-mono truncate hidden md:block">
                       "{post.bad_prompt?.slice(0, 60)}..."
                     </span>
@@ -238,53 +271,91 @@ export default function QueuePage() {
                 {expanded === post.id && (
                   <div className="px-6 pb-6 border-t border-[#1A2540]">
 
-                    {/* Prompt comparison */}
-                    <div className="grid grid-cols-2 gap-6 mt-6">
+                    {/* Content — format-aware */}
+                    <div className="mt-6">
+                    {post.format === 'tip_list' ? (
+                      /* Tip list display */
+                      <div className="space-y-3">
+                        <div className="text-xs text-purple-400 font-bold uppercase tracking-widest">📋 {post.bad_prompt}</div>
+                        <div className="grid gap-2">
+                          {(() => { try { return JSON.parse(post.bad_output); } catch { return []; } })().map((tip: string, i: number) => (
+                            <div key={i} className="bg-[#080B14] border border-[#1A2540] rounded-lg px-4 py-3 text-sm text-gray-300 flex gap-3">
+                              <span className="text-purple-500 font-mono shrink-0">{i + 1}.</span>
+                              {tip}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mt-4">Caption</div>
+                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
+                      </div>
+                    ) : post.format === 'myth_bust' ? (
+                      /* Myth bust display */
+                      <div className="space-y-3">
+                        {(() => { try { return JSON.parse(post.bad_output); } catch { return null; } })() && (() => {
+                          const d = JSON.parse(post.bad_output);
+                          return (
+                            <div className="space-y-3">
+                              <div className="bg-[#1A0A0A] border border-[#FF2D7840] rounded-lg p-4">
+                                <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest mb-2">❌ Myth</div>
+                                <div className="text-gray-300 text-sm">{d.myth_statement}</div>
+                              </div>
+                              <div className="bg-[#0A1A0A] border border-[#4D9EFF40] rounded-lg p-4">
+                                <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest mb-2">✅ Reality</div>
+                                <div className="text-gray-300 text-sm">{d.reality}</div>
+                              </div>
+                              <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4">
+                                <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Proof</div>
+                                <div className="text-gray-400 text-sm">{d.proof}</div>
+                              </div>
+                              <div className="bg-[#080B14] border border-[#4D9EFF25] rounded-lg p-4">
+                                <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest mb-2">Fix</div>
+                                <div className="text-gray-300 text-sm">{d.fix}</div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mt-2">Caption</div>
+                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
+                      </div>
+                    ) : (
+                      /* Before/after display */
+                      <div className="grid grid-cols-2 gap-6">
                       {/* BAD */}
                       <div className="space-y-3">
                         <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#FF2D78]" />
-                          Bad Prompt
+                          <span className="w-2 h-2 rounded-full bg-[#FF2D78]" />Bad Prompt
                         </div>
-                        <div className="bg-[#080B14] border border-[#FF2D7830] rounded-lg p-4 font-mono text-sm text-gray-300">
-                          {post.bad_prompt}
-                        </div>
+                        <div className="bg-[#080B14] border border-[#FF2D7830] rounded-lg p-4 font-mono text-sm text-gray-300">{post.bad_prompt}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
                         <div className="bg-[#080B14] border border-[#FF2D7820] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
                           {(post as any).bad_output_snippet || post.bad_output.slice(0, 120) + '…'}
                         </div>
                         <details className="text-xs text-gray-600 cursor-pointer">
                           <summary className="hover:text-gray-400">Full output</summary>
-                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">
-                            {post.bad_output}
-                          </div>
+                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">{post.bad_output}</div>
                         </details>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
                       </div>
-
                       {/* GOOD */}
                       <div className="space-y-3">
                         <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#4D9EFF]" />
-                          Well Prompted
+                          <span className="w-2 h-2 rounded-full bg-[#4D9EFF]" />Well Prompted
                         </div>
-                        <div className="bg-[#080B14] border border-[#4D9EFF30] rounded-lg p-4 font-mono text-sm text-gray-300">
-                          {post.good_prompt}
-                        </div>
+                        <div className="bg-[#080B14] border border-[#4D9EFF30] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
                         <div className="bg-[#080B14] border border-[#4D9EFF20] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
                           {(post as any).good_output_snippet || post.good_output.slice(0, 120) + '…'}
                         </div>
                         <details className="text-xs text-gray-600 cursor-pointer">
                           <summary className="hover:text-gray-400">Full output</summary>
-                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">
-                            {post.good_output}
-                          </div>
+                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">{post.good_output}</div>
                         </details>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_good}</div>
                       </div>
+                      </div>
+                    )}
                     </div>
 
                     {/* Video preview (if available) */}

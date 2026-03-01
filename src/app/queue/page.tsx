@@ -233,10 +233,16 @@ export default function QueuePage() {
                         <div className="bg-[#080B14] border border-[#FF2D7830] rounded-lg p-4 font-mono text-sm text-gray-300">
                           {post.bad_prompt}
                         </div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Output</div>
-                        <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4 text-sm text-gray-400 max-h-36 overflow-y-auto leading-relaxed">
-                          {post.bad_output}
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
+                        <div className="bg-[#080B14] border border-[#FF2D7820] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
+                          {(post as any).bad_output_snippet || post.bad_output.slice(0, 120) + '…'}
                         </div>
+                        <details className="text-xs text-gray-600 cursor-pointer">
+                          <summary className="hover:text-gray-400">Full output</summary>
+                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">
+                            {post.bad_output}
+                          </div>
+                        </details>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
                       </div>
@@ -250,10 +256,16 @@ export default function QueuePage() {
                         <div className="bg-[#080B14] border border-[#4D9EFF30] rounded-lg p-4 font-mono text-sm text-gray-300">
                           {post.good_prompt}
                         </div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Output</div>
-                        <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4 text-sm text-gray-400 max-h-36 overflow-y-auto leading-relaxed">
-                          {post.good_output}
+                        <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
+                        <div className="bg-[#080B14] border border-[#4D9EFF20] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
+                          {(post as any).good_output_snippet || post.good_output.slice(0, 120) + '…'}
                         </div>
+                        <details className="text-xs text-gray-600 cursor-pointer">
+                          <summary className="hover:text-gray-400">Full output</summary>
+                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">
+                            {post.good_output}
+                          </div>
+                        </details>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_good}</div>
                       </div>

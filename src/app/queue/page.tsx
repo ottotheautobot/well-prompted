@@ -46,11 +46,13 @@ export default function QueuePage() {
               });
               if (res.ok) {
                 setFilter('pending_review');
+                setLoading(true);
                 const data = await fetch('/api/posts?status=pending_review').then(r => r.json());
                 setPosts(data);
+                setLoading(false);
               } else {
-                const err = await res.json();
-                alert('Error: ' + (err.error || 'Unknown error'));
+                const err = await res.json().catch(() => ({}));
+                alert('Generation failed: ' + (err.error || 'Unknown error'));
               }
             } finally {
               setGenerating(false);

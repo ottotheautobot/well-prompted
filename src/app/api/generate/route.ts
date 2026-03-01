@@ -253,37 +253,35 @@ Return JSON only, no markdown:
 
     // === STAGE 4: Generate captions with hook ===
     const captionsRaw = await callClaude(
-      `You write Instagram captions for @well.prompted, a page that teaches prompt engineering through before/after demos.
+      `You write Instagram captions for @well.prompted — a sharp, no-BS page teaching prompt engineering through before/after demos.
 
 BEFORE/AFTER:
 Bad prompt: "${concept.bad_prompt}"
 Bad output (first 200 chars): "${bad_output.slice(0, 200)}"
 
-Good prompt: "${concept.good_prompt}"  
+Good prompt: "${concept.good_prompt}"
 Good output (first 200 chars): "${good_output.slice(0, 200)}"
 
 What changed: ${concept.improvement_summary}
-Hook angle for this post: "${contentItem?.hook}"
+Hook angle: "${contentItem?.hook}"
 
-Write two captions:
+CAPTION FORMULA:
 
-caption_bad (for the "before" slide):
-- First line = the hook. Make it punchy. This is what shows as preview text before someone taps.
-- 2-3 sentences total. Explain WHY this prompt fails — what the AI has to guess, what's missing.
-- End with something that makes people swipe to see the fix.
+caption_bad (slide 1):
+- Line 1: HOOK — 5-8 words, punchy, makes them feel called out or curious. This is preview text.
+- Lines 2-3: 1-2 short sentences. Exactly what's wrong — what the AI had to guess, what's missing.
+- Final line: "Swipe to fix it." (exactly this)
 
-caption_good (for the "after" slide):
-- First line = name what changed. Be specific.
-- 2-3 sentences. Explain exactly what was added and why each change produced a better result.
-- Teach the principle, not just the result.
+caption_good (slide 2):
+- Line 1: Name the technique. Bold, declarative. E.g. "Constraint-based prompting." or "Context loading changes everything."
+- Lines 2-3: 1-2 short sentences. What changed and exactly why it worked.
+- Final line: one of: "Save this." / "Screenshot it." / "Use it today." / "Try it now."
 
-Tone: Smart, direct, slightly edgy. Like a senior engineer who's seen it all. Zero corporate speak. Zero emoji.
+TONE: No emojis. No hashtags. No corporate speak. Short sentences. Active voice. If it sounds like a newsletter, rewrite it.
+Never say: leverage, synergy, unlock, game-changer, elevate.
 
 Return JSON only:
-{
-  "caption_bad": "...",
-  "caption_good": "..."
-}`,
+{"caption_bad": "...", "caption_good": "..."}`,
       undefined, 400
     );
 

@@ -1,4 +1,4 @@
-export type PostStatus = 'draft' | 'pending_review' | 'approved' | 'scheduled' | 'published' | 'rejected';
+export type PostStatus = 'draft' | 'pending_review' | 'approved' | 'rendering' | 'pending_video_review' | 'scheduled' | 'published' | 'rejected';
 
 export type PostFormat = 'before_after' | 'model_vs_model' | 'tip_card' | 'myth_bust' | 'ranked';
 

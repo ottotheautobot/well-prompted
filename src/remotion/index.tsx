@@ -1,7 +1,6 @@
 import { Composition, registerRoot } from 'remotion';
 import { PromptVideo } from './PromptVideo';
 
-// 4:5 portrait — 1080x1350 @ 30fps
 const WIDTH = 1080;
 const HEIGHT = 1350;
 const FPS = 30;
@@ -19,7 +18,8 @@ const RemotionRoot: React.FC = () => {
         height={HEIGHT}
         defaultProps={{
           prompt: 'write me a cold email to get clients',
-          output: 'Subject: Working Together\n\nHi there, I hope this finds you well. I wanted to reach out because I think we could work together. We have great services. Let me know if you want to chat!',
+          output: 'Subject: Working Together\n\nHi there, I hope this finds you well.',
+          outputSnippet: 'Hi there, I hope this finds you well.',
           variant: 'bad' as const,
           postNumber: 1 as const,
           category: 'business',

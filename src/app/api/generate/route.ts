@@ -289,6 +289,41 @@ Return JSON only:
 
     const captions = JSON.parse(captionsRaw.replace(/```json\n?|\n?```/g, '').trim());
 
+    // === STAGE 5: Extract video snippets (max 15 words each) ===
+    const snippetsRaw = await callClaude(
+      `You pick the single most revealing sentence from AI outputs for a before/after prompt comparison video.
+
+The video shows the prompt being typed, then ONE sentence of output fades in on screen.
+On mobile at 1080x1350px, that sentence must be legible — so max ~15 words.
+
+BAD OUTPUT (shows AI failure):
+"${bad_output.slice(0, 600)}"
+
+GOOD OUTPUT (shows AI success):
+"${good_output.slice(0, 600)}"
+
+TOPIC: ${concept.topic}
+
+Pick:
+- bad_snippet: The sentence that best shows WHY the bad output fails — the most generic, vague, or placeholder-filled line. Shows the problem instantly.
+- good_snippet: The sentence that best shows WHY the good output succeeds — the most specific, concrete, impressive line. Shows the payoff instantly.
+
+Rules:
+- Each snippet must be a DIRECT QUOTE from the output (copy exact words)
+- Max 20 words each
+- No ellipses — pick a complete thought
+- Must make sense without the surrounding context
+
+Return JSON only:
+{
+  "bad_snippet": "...",
+  "good_snippet": "..."
+}`,
+      undefined, 200
+    );
+
+    const snippets = JSON.parse(snippetsRaw.replace(/```json\n?|\n?```/g, '').trim());
+
     // === Save to DB ===
     const { data, error } = await supabase.from('posts').insert({
       status: 'pending_review',
@@ -301,6 +336,8 @@ Return JSON only:
       good_output,
       caption_bad: captions.caption_bad,
       caption_good: captions.caption_good,
+      bad_output_snippet: snippets.bad_snippet,
+      good_output_snippet: snippets.good_snippet,
       render_status: 'pending',
     }).select().single();
 

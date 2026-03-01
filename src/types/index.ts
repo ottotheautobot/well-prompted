@@ -26,8 +26,10 @@ export interface Post {
   // Content
   bad_prompt: string;
   bad_output: string;
+  bad_output_snippet?: string;  // Most revealing 1-2 sentences for video
   good_prompt: string;
   good_output: string;
+  good_output_snippet?: string; // Most impressive 1-2 sentences for video
 
   // Captions
   caption_bad: string;   // Why this prompt fails

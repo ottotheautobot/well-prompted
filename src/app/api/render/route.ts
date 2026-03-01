@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
         inputProps: {
           prompt: post.bad_prompt,
           output: post.bad_output,
+          outputSnippet: post.bad_output_snippet || post.bad_output.slice(0, 120),
           variant: 'bad',
           postNumber: 1,
           category: post.category,
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
         inputProps: {
           prompt: post.good_prompt,
           output: post.good_output,
+          outputSnippet: post.good_output_snippet || post.good_output.slice(0, 120),
           variant: 'good',
           postNumber: 2,
           category: post.category,

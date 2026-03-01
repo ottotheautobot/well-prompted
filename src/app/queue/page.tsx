@@ -42,6 +42,22 @@ export default function QueuePage() {
 
   useEffect(() => { fetchPosts(filter); }, [filter]);
 
+  // On load: auto-resume any posts stuck in 'rendering' that have render_ids saved
+  useEffect(() => {
+    const resumeStuckRenders = async () => {
+      const res = await fetch('/api/posts?status=rendering');
+      if (!res.ok) return;
+      const stuck = await res.json();
+      for (const post of stuck) {
+        const ids = (post as any).render_ids;
+        if (ids?.bad_render_id && ids?.good_render_id) {
+          pollRenderStatus(post.id, ids.bad_render_id, ids.good_render_id, ids.bucket);
+        }
+      }
+    };
+    resumeStuckRenders();
+  }, []);
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {

@@ -8,70 +8,86 @@ export default function QueuePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending_review');
   const [generating, setGenerating] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/posts?status=${filter}`)
-      .then(r => r.json())
-      .then(data => { setPosts(data); setLoading(false); });
-  }, [filter]);
+  const fetchPosts = async (status: string) => {
+    setLoading(true);
+    const data = await fetch(`/api/posts?status=${status}`).then(r => r.json());
+    setPosts(data);
+    setLoading(false);
+  };
 
-  const handleApprove = async (id: string) => {
-    await fetch(`/api/approve`, { method: 'POST', body: JSON.stringify({ id, action: 'approve' }), headers: { 'Content-Type': 'application/json' } });
+  useEffect(() => { fetchPosts(filter); }, [filter]);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setFilter('pending_review');
+        await fetchPosts('pending_review');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert('Generation failed: ' + (err.error || 'Unknown error'));
+      }
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+    await fetch('/api/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, action }),
+    });
     setPosts(posts.filter(p => p.id !== id));
   };
 
-  const handleReject = async (id: string) => {
-    await fetch(`/api/approve`, { method: 'POST', body: JSON.stringify({ id, action: 'reject' }), headers: { 'Content-Type': 'application/json' } });
-    setPosts(posts.filter(p => p.id !== id));
+  const statusColors: Record<string, string> = {
+    pending_review: 'bg-yellow-900 text-yellow-400',
+    approved: 'bg-green-900 text-green-400',
+    scheduled: 'bg-blue-900 text-blue-400',
+    published: 'bg-purple-900 text-purple-400',
+    rejected: 'bg-red-900 text-red-400',
   };
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-white p-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-[#080B14] text-white">
+      {/* Header */}
+      <div className="border-b border-[#1A2540] px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-6">
           <div>
-            <span className="text-white font-bold text-2xl">well</span>
-            <span className="text-[#4D9EFF] font-bold text-2xl">.prompted</span>
-            <span className="text-gray-500 ml-3 text-sm">Content Queue</span>
+            <span className="text-white font-bold text-xl">well</span>
+            <span className="text-[#4D9EFF] font-bold text-xl">.prompted</span>
           </div>
-          <button
-            onClick={async () => {
-            setGenerating(true);
-            try {
-              const res = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),
-              });
-              if (res.ok) {
-                setFilter('pending_review');
-                setLoading(true);
-                const data = await fetch('/api/posts?status=pending_review').then(r => r.json());
-                setPosts(data);
-                setLoading(false);
-              } else {
-                const err = await res.json().catch(() => ({}));
-                alert('Generation failed: ' + (err.error || 'Unknown error'));
-              }
-            } finally {
-              setGenerating(false);
-            }
-          }}
+          <nav className="flex gap-4 text-sm text-gray-400">
+            <a href="/queue" className="text-white font-medium">Queue</a>
+            <a href="/calendar" className="hover:text-white transition">Calendar</a>
+            <a href="/settings" className="hover:text-white transition">Settings</a>
+          </nav>
+        </div>
+        <button
+          onClick={handleGenerate}
           disabled={generating}
           className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {generating ? '⏳ Generating...' : '+ Generate Post'}
-          </button>
-        </div>
+        >
+          {generating ? '⏳ Generating...' : '+ Generate Post'}
+        </button>
+      </div>
 
+      <div className="max-w-6xl mx-auto px-8 py-6">
         {/* Filter tabs */}
         <div className="flex gap-2 mb-6">
           {['pending_review', 'approved', 'scheduled', 'published', 'rejected'].map(s => (
             <button
               key={s}
               onClick={() => setFilter(s)}
-              className={`px-3 py-1 rounded text-xs font-medium transition ${filter === s ? 'bg-[#4D9EFF] text-white' : 'bg-[#0F1520] text-gray-400 hover:text-white'}`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${filter === s ? 'bg-[#4D9EFF] text-white' : 'bg-[#0F1520] text-gray-400 hover:text-white border border-[#1A2540]'}`}
             >
               {s.replace('_', ' ')}
             </button>
@@ -80,59 +96,99 @@ export default function QueuePage() {
 
         {/* Posts */}
         {loading ? (
-          <div className="text-gray-500">Loading...</div>
+          <div className="text-gray-500 text-center py-20">Loading...</div>
         ) : posts.length === 0 ? (
-          <div className="text-gray-500 text-center py-20">No posts in this queue.</div>
+          <div className="text-center py-20">
+            <div className="text-gray-500 mb-4">No posts in this queue.</div>
+            {filter === 'pending_review' && (
+              <button onClick={handleGenerate} disabled={generating} className="text-[#4D9EFF] text-sm hover:underline">
+                Generate your first post →
+              </button>
+            )}
+          </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {posts.map(post => (
-              <div key={post.id} className="bg-[#0F1520] border border-[#1A2540] rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs bg-[#4D9EFF22] text-[#4D9EFF] px-2 py-1 rounded">{post.category}</span>
-                  <span className="text-xs bg-[#FF2D7822] text-[#FF2D78] px-2 py-1 rounded">{post.format}</span>
-                  {post.techniques.map(t => (
-                    <span key={t} className="text-xs bg-[#FFFFFF11] text-gray-400 px-2 py-1 rounded">{t}</span>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  {/* Bad prompt */}
-                  <div>
-                    <div className="text-xs text-[#FF2D78] font-bold mb-2 uppercase tracking-wider">✗ Bad Prompt</div>
-                    <div className="bg-[#080B14] border border-[#FF2D7833] rounded-lg p-3 text-sm font-mono text-gray-300 mb-2">{post.bad_prompt}</div>
-                    <div className="text-xs text-gray-500 mb-2">Caption:</div>
-                    <div className="text-sm text-gray-400">{post.caption_bad}</div>
+              <div key={post.id} className="bg-[#0F1520] border border-[#1A2540] rounded-xl overflow-hidden">
+                {/* Post header */}
+                <div
+                  className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-[#111827] transition"
+                  onClick={() => setExpanded(expanded === post.id ? null : post.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusColors[post.status] || 'bg-gray-800 text-gray-400'}`}>
+                      {post.status.replace('_', ' ')}
+                    </span>
+                    <span className="text-xs bg-[#4D9EFF15] text-[#4D9EFF] px-2 py-1 rounded border border-[#4D9EFF30]">{post.category}</span>
+                    {post.techniques?.slice(0, 2).map(t => (
+                      <span key={t} className="text-xs text-gray-500 hidden sm:inline">{t}</span>
+                    ))}
                   </div>
-
-                  {/* Good prompt */}
-                  <div>
-                    <div className="text-xs text-[#4D9EFF] font-bold mb-2 uppercase tracking-wider">✓ Well Prompted</div>
-                    <div className="bg-[#080B14] border border-[#4D9EFF33] rounded-lg p-3 text-sm font-mono text-gray-300 mb-2">{post.good_prompt}</div>
-                    <div className="text-xs text-gray-500 mb-2">Caption:</div>
-                    <div className="text-sm text-gray-400">{post.caption_good}</div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-600 text-xs font-mono truncate max-w-xs hidden md:block">
+                      "{post.bad_prompt?.slice(0, 50)}..."
+                    </span>
+                    <span className="text-gray-600 text-sm">{expanded === post.id ? '▲' : '▼'}</span>
                   </div>
                 </div>
 
-                {/* Video status */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xs text-gray-500">Videos:</span>
-                  <span className={`text-xs px-2 py-1 rounded ${post.render_status === 'done' ? 'bg-green-900 text-green-400' : post.render_status === 'rendering' ? 'bg-yellow-900 text-yellow-400' : 'bg-gray-800 text-gray-500'}`}>
-                    {post.render_status ?? 'pending'}
-                  </span>
-                </div>
+                {/* Expanded content */}
+                {expanded === post.id && (
+                  <div className="px-6 pb-6 border-t border-[#1A2540]">
+                    <div className="grid grid-cols-2 gap-6 mt-6">
+                      {/* BAD side */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest">✗ Bad Prompt</span>
+                        </div>
+                        <div className="bg-[#080B14] border border-[#FF2D7830] rounded-lg p-4 font-mono text-sm text-gray-300 mb-3">
+                          {post.bad_prompt}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Output</div>
+                        <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4 text-sm text-gray-400 mb-3 max-h-40 overflow-y-auto">
+                          {post.bad_output}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Caption</div>
+                        <div className="text-sm text-gray-300 italic">{post.caption_bad}</div>
+                      </div>
 
-                {/* Actions */}
-                {post.status === 'pending_review' && (
-                  <div className="flex gap-3">
-                    <button onClick={() => handleApprove(post.id)} className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition">
-                      ✓ Approve
-                    </button>
-                    <button onClick={() => handleReject(post.id)} className="bg-[#FF2D7833] text-[#FF2D78] border border-[#FF2D7855] px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#FF2D7855] transition">
-                      ✗ Reject
-                    </button>
-                    <button className="bg-[#0F1520] text-gray-400 border border-[#1A2540] px-4 py-2 rounded-lg text-sm hover:text-white transition">
-                      Edit
-                    </button>
+                      {/* GOOD side */}
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest">✓ Well Prompted</span>
+                        </div>
+                        <div className="bg-[#080B14] border border-[#4D9EFF30] rounded-lg p-4 font-mono text-sm text-gray-300 mb-3">
+                          {post.good_prompt}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Output</div>
+                        <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4 text-sm text-gray-400 mb-3 max-h-40 overflow-y-auto">
+                          {post.good_output}
+                        </div>
+                        <div className="text-xs text-gray-500 mb-1 uppercase tracking-wider">Caption</div>
+                        <div className="text-sm text-gray-300 italic">{post.caption_good}</div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    {post.status === 'pending_review' && (
+                      <div className="flex gap-3 mt-6 pt-4 border-t border-[#1A2540]">
+                        <button
+                          onClick={() => handleAction(post.id, 'approve')}
+                          className="bg-[#4D9EFF] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleAction(post.id, 'reject')}
+                          className="bg-transparent text-[#FF2D78] border border-[#FF2D7855] px-5 py-2 rounded-lg text-sm font-medium hover:bg-[#FF2D7815] transition"
+                        >
+                          ✗ Reject
+                        </button>
+                        <button className="bg-transparent text-gray-400 border border-[#1A2540] px-5 py-2 rounded-lg text-sm hover:text-white transition">
+                          Edit
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

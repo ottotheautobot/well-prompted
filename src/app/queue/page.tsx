@@ -7,6 +7,7 @@ export default function QueuePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('pending_review');
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     fetch(`/api/posts?status=${filter}`)
@@ -35,10 +36,30 @@ export default function QueuePage() {
             <span className="text-gray-500 ml-3 text-sm">Content Queue</span>
           </div>
           <button
-            onClick={() => fetch('/api/generate', { method: 'POST' })}
-            className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition"
+            onClick={async () => {
+            setGenerating(true);
+            try {
+              const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+              });
+              if (res.ok) {
+                setFilter('pending_review');
+                const data = await fetch('/api/posts?status=pending_review').then(r => r.json());
+                setPosts(data);
+              } else {
+                const err = await res.json();
+                alert('Error: ' + (err.error || 'Unknown error'));
+              }
+            } finally {
+              setGenerating(false);
+            }
+          }}
+          disabled={generating}
+          className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            + Generate Post
+            {generating ? '⏳ Generating...' : '+ Generate Post'}
           </button>
         </div>
 

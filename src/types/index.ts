@@ -1,6 +1,6 @@
 export type PostStatus = 'draft' | 'pending_review' | 'approved' | 'rendering' | 'pending_video_review' | 'scheduled' | 'published' | 'rejected';
 
-export type PostFormat = 'before_after' | 'model_vs_model' | 'tip_card' | 'myth_bust' | 'ranked';
+export type PostFormat = 'before_after' | 'tip_list' | 'myth_bust' | 'model_vs_model' | 'tip_card' | 'ranked';
 
 export type ContentCategory = 'writing' | 'coding' | 'business' | 'image_gen' | 'data' | 'creative' | 'productivity';
 

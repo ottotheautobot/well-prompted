@@ -160,7 +160,7 @@ export default function QueuePage() {
           </div>
           <nav className="flex gap-4 text-sm">
             <a href="/queue" className="text-white font-medium border-b border-[#4D9EFF] pb-1">Queue</a>
-            <a href="/calendar" className="text-gray-400 hover:text-white transition">Calendar</a>
+            <a href="/schedule" className="text-gray-400 hover:text-white transition">Schedule</a>
             <a href="/settings" className="text-gray-400 hover:text-white transition">Settings</a>
           </nav>
         </div>

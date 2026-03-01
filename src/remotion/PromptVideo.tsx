@@ -9,197 +9,185 @@ interface PromptVideoProps {
   category: string;
 }
 
-const ACCENT_PINK = '#FF2D78';
-const ACCENT_BLUE = '#4D9EFF';
-const BG = '#080B14';
-const CARD_BG = '#0F1520';
+const PINK  = '#FF2D78';
+const BLUE  = '#4D9EFF';
+const BG    = '#080B14';
+const CARD  = '#0C1220';
+
+// Canvas: 1080 × 1350
+// Layout (px):
+//   0-6    top accent bar
+//   20-90  logo row (h=70)
+//   100-148 variant label row (h=48)
+//   160-690 PROMPT card (h=530)  ← ~39%
+//   710-756 AI OUTPUT divider (h=46)
+//   770-1240 OUTPUT card (h=470)  ← ~35%
+//   1260-1320 swipe hint
+//   1344-1350 bottom accent bar
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
-  prompt,
-  outputSnippet,
-  variant,
-  postNumber,
-  category,
+  prompt, outputSnippet, variant, postNumber, category,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const accentColor = variant === 'bad' ? ACCENT_PINK : ACCENT_BLUE;
-  const label = variant === 'bad' ? '✗ BAD PROMPT' : '✓ WELL PROMPTED';
-
-  // Layout constants — 1080x1350
-  // Header: 0–130px
-  // Prompt card: 130–700px (~570px, ~42%)
-  // Divider: 700–740px
-  // Output card: 740–1250px (~510px, ~38%)
-  // Footer: 1250–1350px
-
-  const HEADER_H = 130;
-  const PROMPT_TOP = 140;
-  const PROMPT_BOTTOM = 690;   // ~550px
-  const DIVIDER_TOP = 700;
-  const OUTPUT_TOP = 750;
-  const OUTPUT_BOTTOM = 1240;  // ~490px
-  const FOOTER_TOP = 1260;
+  const accent = variant === 'bad' ? PINK : BLUE;
+  const label  = variant === 'bad' ? '✗  BAD PROMPT' : '✓  WELL PROMPTED';
 
   // Timing
-  const PROMPT_START = Math.floor(fps * 0.7);
-  const PROMPT_DONE  = Math.floor(fps * 2.2);
-  const OUTPUT_START = Math.floor(fps * 2.6);
-  const FADE_OUT_START = durationInFrames - fps * 0.5;
+  const PROMPT_START = Math.round(fps * 0.6);
+  const PROMPT_END   = Math.round(fps * 2.0);
+  const OUT_START    = Math.round(fps * 2.4);
+  const FADE_START   = durationInFrames - fps * 0.4;
 
-  const headerOpacity = spring({ frame, fps, from: 0, to: 1, config: { damping: 20 } });
+  // Animations
+  const headerIn = spring({ frame, fps, from: 0, to: 1, config: { damping: 22 } });
 
-  const promptProgress = interpolate(frame, [PROMPT_START, PROMPT_DONE], [0, 1], {
+  const promptPct = interpolate(frame, [PROMPT_START, PROMPT_END], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.out(Easing.ease),
   });
-  const promptChars = Math.floor(promptProgress * prompt.length);
-  const promptText = prompt.slice(0, promptChars);
-  const showPromptCursor = frame < OUTPUT_START;
+  const promptText = prompt.slice(0, Math.floor(promptPct * prompt.length));
+  const cursorVisible = (f: number) => Math.sin(f * 0.28) > 0;
 
-  const outputOpacity = interpolate(frame, [OUTPUT_START, OUTPUT_START + 8], [0, 1], {
+  const outOpacity = interpolate(frame, [OUT_START, OUT_START + 6], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
-  const outputProgress = interpolate(frame, [OUTPUT_START, OUTPUT_START + fps * 2.8], [0, 1], {
+  const outPct = interpolate(frame, [OUT_START, OUT_START + fps * 2.6], [0, 1], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
     easing: Easing.out(Easing.ease),
   });
-  const outputChars = Math.floor(outputProgress * outputSnippet.length);
-  const outputText = outputSnippet.slice(0, outputChars);
-  const showOutputCursor = frame >= OUTPUT_START && outputChars < outputSnippet.length;
+  const outputText = outputSnippet.slice(0, Math.floor(outPct * outputSnippet.length));
+  const showOutCursor = frame >= OUT_START && outputText.length < outputSnippet.length;
 
-  const globalOpacity = interpolate(frame, [FADE_OUT_START, durationInFrames], [1, 0], {
+  const globalOpacity = interpolate(frame, [FADE_START, durationInFrames], [1, 0], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
   });
 
   return (
     <AbsoluteFill style={{ backgroundColor: BG, opacity: globalOpacity }}>
 
-      {/* Top accent bar */}
+      {/* ── Top accent bar ── */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, height: 6,
-        background: `linear-gradient(90deg, ${ACCENT_PINK}, ${ACCENT_BLUE})`,
-        opacity: headerOpacity,
+        background: `linear-gradient(90deg, ${PINK}, ${BLUE})`,
+        opacity: headerIn,
       }} />
 
-      {/* Logo row */}
+      {/* ── Logo row  (top 20, height 70) ── */}
       <div style={{
-        position: 'absolute', top: 30, left: 52, right: 52,
+        position: 'absolute', top: 20, left: 52, right: 52, height: 70,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        opacity: headerOpacity,
+        opacity: headerIn,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#FFFFFF', fontWeight: 800, fontSize: 32, fontFamily: 'sans-serif', letterSpacing: -0.5 }}>well</span>
-          <span style={{ color: ACCENT_BLUE, fontWeight: 800, fontSize: 32, fontFamily: 'sans-serif', letterSpacing: -0.5 }}>.prompted</span>
-          <span style={{ color: '#252D45', fontSize: 22, fontFamily: 'sans-serif', marginLeft: 6 }}>#{postNumber}</span>
+          <span style={{ color: '#FFF', fontWeight: 800, fontSize: 34, fontFamily: 'sans-serif', letterSpacing: -0.5 }}>well</span>
+          <span style={{ color: BLUE,  fontWeight: 800, fontSize: 34, fontFamily: 'sans-serif', letterSpacing: -0.5 }}>.prompted</span>
+          <span style={{ color: '#222B42', fontSize: 24, fontFamily: 'sans-serif', marginLeft: 8 }}>#{postNumber}</span>
         </div>
         <div style={{
-          background: `${accentColor}18`, border: `1.5px solid ${accentColor}50`,
-          borderRadius: 8, padding: '5px 16px',
-          color: accentColor, fontSize: 19, fontFamily: 'sans-serif', fontWeight: 700, letterSpacing: 1,
+          background: `${accent}15`, border: `1.5px solid ${accent}45`,
+          borderRadius: 8, padding: '6px 18px',
+          color: accent, fontSize: 20, fontFamily: 'sans-serif', fontWeight: 700, letterSpacing: 1,
         }}>
           {category.replace(/_/g, ' ')}
         </div>
       </div>
 
-      {/* Variant label */}
+      {/* ── Variant label  (top 100, height 48) ── */}
       <div style={{
-        position: 'absolute', top: HEADER_H, left: 52,
-        color: accentColor, fontSize: 21, fontWeight: 800,
+        position: 'absolute', top: 100, left: 52, height: 48,
+        display: 'flex', alignItems: 'center',
+        color: accent, fontSize: 22, fontWeight: 800,
         letterSpacing: 5, fontFamily: 'sans-serif',
-        opacity: headerOpacity,
+        opacity: headerIn,
       }}>
         {label}
       </div>
 
-      {/* Prompt card — ~550px tall */}
+      {/* ── Prompt card  (top 160 → 690, h=530) ── */}
       <div style={{
-        position: 'absolute',
-        top: PROMPT_TOP, left: 52, right: 52,
-        height: PROMPT_BOTTOM - PROMPT_TOP,
-        background: CARD_BG,
-        border: `1px solid ${accentColor}35`,
-        borderLeft: `4px solid ${accentColor}`,
-        borderRadius: 12,
-        padding: '32px 40px',
+        position: 'absolute', top: 160, left: 52, right: 52, height: 530,
+        background: CARD,
+        border: `1px solid ${accent}30`,
+        borderLeft: `5px solid ${accent}`,
+        borderRadius: 14,
+        padding: '40px 44px',
         display: 'flex', alignItems: 'center',
         overflow: 'hidden',
       }}>
         <span style={{
-          color: '#D0DAF0', fontSize: 30, lineHeight: 1.6,
+          color: '#CAD6F0', fontSize: 30, lineHeight: 1.6,
           fontFamily: 'monospace', wordBreak: 'break-word',
         }}>
           {promptText}
-          {showPromptCursor && (
-            <span style={{ color: accentColor, opacity: Math.sin(frame * 0.25) > 0 ? 1 : 0 }}>▋</span>
+          {frame < OUT_START && (
+            <span style={{ color: accent, opacity: cursorVisible(frame) ? 1 : 0 }}>▋</span>
           )}
         </span>
       </div>
 
-      {/* Divider */}
+      {/* ── "AI OUTPUT" divider  (top 710 → 756) ── */}
       <div style={{
-        position: 'absolute', top: DIVIDER_TOP, left: 52, right: 52,
-        display: 'flex', alignItems: 'center', gap: 16,
-        opacity: interpolate(frame, [OUTPUT_START - fps * 0.3, OUTPUT_START], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
+        position: 'absolute', top: 710, left: 52, right: 52, height: 46,
+        display: 'flex', alignItems: 'center', gap: 18,
+        opacity: outOpacity,
       }}>
-        <div style={{ flex: 1, height: 1, background: '#1A2440' }} />
-        <span style={{ color: '#2E3D5A', fontSize: 17, fontWeight: 700, letterSpacing: 4, fontFamily: 'sans-serif' }}>
+        <div style={{ flex: 1, height: 1, background: '#182035' }} />
+        <span style={{ color: '#2C3D5C', fontSize: 18, fontWeight: 700, letterSpacing: 4, fontFamily: 'sans-serif' }}>
           AI OUTPUT
         </span>
-        <div style={{ flex: 1, height: 1, background: '#1A2440' }} />
+        <div style={{ flex: 1, height: 1, background: '#182035' }} />
       </div>
 
-      {/* Output card — ~490px tall */}
-      {frame >= OUTPUT_START && (
+      {/* ── Output card  (top 770 → 1240, h=470) ── */}
+      {frame >= OUT_START && (
         <div style={{
-          position: 'absolute',
-          top: OUTPUT_TOP, left: 52, right: 52,
-          height: OUTPUT_BOTTOM - OUTPUT_TOP,
+          position: 'absolute', top: 770, left: 52, right: 52, height: 470,
           background: '#050810',
-          border: '1px solid #141E32',
-          borderRadius: 12,
-          padding: '36px 40px',
+          border: '1px solid #111A2E',
+          borderRadius: 14,
+          padding: '40px 44px',
           display: 'flex', alignItems: 'center',
           overflow: 'hidden',
-          opacity: outputOpacity,
+          opacity: outOpacity,
         }}>
           <span style={{
-            color: '#6B80AA',
-            fontSize: 33,
-            lineHeight: 1.6,
-            fontFamily: 'monospace',
-            wordBreak: 'break-word',
+            color: '#607090', fontSize: 32, lineHeight: 1.6,
+            fontFamily: 'monospace', wordBreak: 'break-word',
           }}>
             {outputText}
-            {showOutputCursor && (
-              <span style={{ color: ACCENT_BLUE, opacity: Math.sin(frame * 0.18) > 0 ? 1 : 0 }}>▋</span>
+            {showOutCursor && (
+              <span style={{ color: BLUE, opacity: cursorVisible(frame) ? 1 : 0 }}>▋</span>
             )}
           </span>
         </div>
       )}
 
-      {/* Swipe hint on bad variant */}
+      {/* ── Swipe hint (bad variant, fades in near end) ── */}
       {variant === 'bad' && (
         <div style={{
-          position: 'absolute', bottom: 28, left: 52, right: 52,
+          position: 'absolute', top: 1265, left: 0, right: 0,
           display: 'flex', justifyContent: 'center',
-          opacity: interpolate(frame, [durationInFrames - fps * 1.8, durationInFrames - fps * 1.2], [0, 1], {
-            extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-          }),
+          opacity: interpolate(frame,
+            [durationInFrames - fps * 1.8, durationInFrames - fps * 1.1],
+            [0, 1],
+            { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+          ),
         }}>
-          <span style={{ color: ACCENT_BLUE, fontSize: 22, fontFamily: 'sans-serif', fontWeight: 600, letterSpacing: 2 }}>
+          <span style={{ color: BLUE, fontSize: 22, fontFamily: 'sans-serif', fontWeight: 600, letterSpacing: 3 }}>
             swipe for the fix →
           </span>
         </div>
       )}
 
-      {/* Bottom accent bar */}
+      {/* ── Bottom accent bar ── */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: 4,
-        background: `linear-gradient(90deg, ${ACCENT_BLUE}, ${ACCENT_PINK})`,
-        opacity: headerOpacity,
+        background: `linear-gradient(90deg, ${BLUE}, ${PINK})`,
+        opacity: headerIn,
       }} />
+
     </AbsoluteFill>
   );
 };

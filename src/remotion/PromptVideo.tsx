@@ -14,6 +14,15 @@ const BLUE  = '#4D9EFF';
 const BG    = '#080B14';
 const CARD  = '#0C1220';
 
+// Dynamic font size: larger text when content is short, scales down for long content
+function dynamicSize(text: string, min: number, max: number): number {
+  const len = text.length;
+  if (len < 50)  return max;
+  if (len < 100) return max - (max - min) * 0.35;
+  if (len < 160) return max - (max - min) * 0.65;
+  return min;
+}
+
 // Canvas: 1080 × 1350
 // Layout (px):
 //   0-6    top accent bar
@@ -31,8 +40,13 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const accent = variant === 'bad' ? PINK : BLUE;
-  const label  = variant === 'bad' ? '✗  BAD PROMPT' : '✓  WELL PROMPTED';
+  // Good variant gets equal visual weight — same border thickness, brighter card bg
+  const accent     = variant === 'bad' ? PINK : BLUE;
+  const cardBg     = variant === 'bad' ? '#0C1220' : '#0A1525';
+  const cardBorder = variant === 'bad' ? `${PINK}30` : `${BLUE}45`; // good slightly stronger
+  const label      = variant === 'bad' ? '✗  BAD PROMPT' : '✓  WELL PROMPTED';
+  const promptSize = dynamicSize(prompt, 24, 40);
+  const outputSize = dynamicSize(outputSnippet, 26, 42);
 
   // Timing
   const PROMPT_START = Math.round(fps * 0.6);
@@ -108,8 +122,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
       {/* ── Prompt card  (top 160 → 690, h=530) ── */}
       <div style={{
         position: 'absolute', top: 160, left: 52, right: 52, height: 530,
-        background: CARD,
-        border: `1px solid ${accent}30`,
+        background: cardBg,
+        border: `1px solid ${cardBorder}`,
         borderLeft: `5px solid ${accent}`,
         borderRadius: 14,
         padding: '40px 44px',
@@ -117,7 +131,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         overflow: 'hidden',
       }}>
         <span style={{
-          color: '#CAD6F0', fontSize: 30, lineHeight: 1.6,
+          color: '#CAD6F0', fontSize: promptSize, lineHeight: 1.6,
           fontFamily: 'monospace', wordBreak: 'break-word',
         }}>
           {promptText}
@@ -144,8 +158,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
       {frame >= OUT_START && (
         <div style={{
           position: 'absolute', top: 770, left: 52, right: 52, height: 470,
-          background: '#050810',
-          border: '1px solid #111A2E',
+          background: variant === 'bad' ? '#050810' : '#060E1C',
+          border: `1px solid ${variant === 'bad' ? '#111A2E' : '#152240'}`,
           borderRadius: 14,
           padding: '40px 44px',
           display: 'flex', alignItems: 'center',
@@ -153,7 +167,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           opacity: outOpacity,
         }}>
           <span style={{
-            color: '#607090', fontSize: 32, lineHeight: 1.6,
+            color: variant === 'bad' ? '#607090' : '#7A9EC8',
+            fontSize: outputSize, lineHeight: 1.6,
             fontFamily: 'monospace', wordBreak: 'break-word',
           }}>
             {outputText}

@@ -41,6 +41,8 @@ export async function POST(req: NextRequest) {
         maxRetries: 1,
         outName: `${id}-bad.mp4`,
         logLevel: 'error',
+        framesPerLambda: 300,
+        concurrencyPerLambda: 1,
         downloadBehavior: { type: 'play-in-browser' },
       }),
       renderMediaOnLambda({
@@ -60,6 +62,8 @@ export async function POST(req: NextRequest) {
         maxRetries: 1,
         outName: `${id}-good.mp4`,
         logLevel: 'error',
+        framesPerLambda: 300,
+        concurrencyPerLambda: 1,
         downloadBehavior: { type: 'play-in-browser' },
       }),
     ]);

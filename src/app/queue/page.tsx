@@ -238,7 +238,7 @@ export default function QueuePage() {
                           {post.bad_output}
                         </div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
-                        <div className="text-sm text-gray-300 italic leading-relaxed">{post.caption_bad}</div>
+                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
                       </div>
 
                       {/* GOOD */}
@@ -255,7 +255,7 @@ export default function QueuePage() {
                           {post.good_output}
                         </div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
-                        <div className="text-sm text-gray-300 italic leading-relaxed">{post.caption_good}</div>
+                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_good}</div>
                       </div>
                     </div>
 

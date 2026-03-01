@@ -86,18 +86,42 @@ export default function QueuePage() {
 
   const handleRender = async (id: string) => {
     setActionLoading(id + '-render');
+    setPosts(posts.map(p => p.id === id ? { ...p, status: 'rendering' as any, render_status: 'rendering' } : p));
+
     const res = await fetch('/api/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),
     });
+
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      alert('Render failed: ' + (err.error || 'Unknown'));
-    } else {
-      // Update post status locally to rendering
-      setPosts(posts.map(p => p.id === id ? { ...p, status: 'rendering' as any, render_status: 'rendering' } : p));
+      alert('Render failed: ' + (data.error || 'Unknown'));
+      setPosts(posts.map(p => p.id === id ? { ...p, render_status: 'failed' } : p));
+    } else if (data.still_rendering) {
+      // Poll for completion in the background
+      const { bad_render_id, good_render_id, bucket } = data;
+      const poll = async () => {
+        const pollRes = await fetch('/api/render-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, bad_render_id, good_render_id, bucket }),
+        });
+        const pollData = await pollRes.json();
+        if (pollData.done) {
+          await fetchPosts('pending_video_review');
+          setFilter('pending_video_review');
+        } else if (!pollData.error) {
+          setTimeout(poll, 8000); // poll every 8s
+        }
+      };
+      setTimeout(poll, 10000); // first check after 10s
+    } else if (data.success) {
+      await fetchPosts('pending_video_review');
+      setFilter('pending_video_review');
     }
+
     setActionLoading(null);
   };
 

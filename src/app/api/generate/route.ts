@@ -45,8 +45,6 @@ async function generateAudio(postId: string, script: string): Promise<{ url: str
     Key: key,
     Body: buf,
     ContentType: 'audio/mpeg',
-    // Public-read so Remotion Lambda can fetch it
-    ACL: 'public-read' as const,
   }));
 
   const url = `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/${key}`;

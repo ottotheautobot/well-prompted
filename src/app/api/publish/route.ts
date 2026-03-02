@@ -59,10 +59,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      step: 'waiting_items',
+      step: 'check_items',
       bad_container_id: badRes.id,
       good_container_id: goodRes.id,
-      message: 'Item containers created. Poll /api/publish with step=check_items to check status.',
     });
   }
 
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (badStatus !== 'FINISHED' || goodStatus !== 'FINISHED') {
-      return NextResponse.json({ step: 'waiting_items', bad_container_id, good_container_id, badStatus, goodStatus, ready: false });
+      return NextResponse.json({ step: 'check_items', bad_container_id, good_container_id, badStatus, goodStatus, ready: false });
     }
 
     // Both ready — create carousel

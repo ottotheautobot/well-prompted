@@ -76,14 +76,35 @@ function pageAlpha(frame: number, start: number, end: number, fadeDur: number) {
   return Math.min(fadeIn, fadeOut);
 }
 
+// Called by calculateMetadata — same math as inside the component
+export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
+  const FADE            = Math.round(fps * 0.45);
+  const WELL_TYPE_START = Math.round(fps * 1.2);
+  const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
+  const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
+  const P1_END          = WELL_TYPE_END + Math.round(fps * 2.5);
+  const itemCount       = props.whyBreakdown?.length || 4;
+  const ITEM_DELAY      = Math.round(fps * 0.45);
+  const whyAnimDur      = Math.round(fps * 0.3) + itemCount * ITEM_DELAY + Math.round(fps * 0.3);
+  const P2_DURATION     = whyAnimDur + Math.round(fps * 10); // anim + 10s hold
+  return P1_END + FADE + P2_DURATION + FADE;
+}
+
 export const PromptVideo: React.FC<PromptVideoProps> = ({
   okayPrompt, wellPrompt, whyBreakdown, category,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const FADE   = Math.round(fps * 0.45);
-  const P1_END = Math.round(fps * 12);   // 360 frames — enough to read both
+  const FADE = Math.round(fps * 0.45);
+
+  // Typing — well prompt starts at 1.2s
+  const WELL_TYPE_START = Math.round(fps * 1.2);
+  const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
+  const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
+
+  // Page 1 ends after typing finishes + 2.5s hold to read
+  const P1_END   = WELL_TYPE_END + Math.round(fps * 2.5);
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;
 
@@ -92,11 +113,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
   const globalIn = spring({ frame, fps, from: 0, to: 1, config: { damping: 22 } });
 
-  // Typing animation for well prompted
-  const WELL_TYPE_START = Math.round(fps * 1.2);
-  const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
-  const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
-  const typeProgress    = interpolate(
+  const typeProgress = interpolate(
     frame,
     [WELL_TYPE_START, WELL_TYPE_END],
     [0, 1],

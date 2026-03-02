@@ -1,5 +1,5 @@
 import { Composition, registerRoot } from 'remotion';
-import { PromptVideo } from './PromptVideo';
+import { PromptVideo, calcVideoDuration } from './PromptVideo';
 import { TipCard } from './TipCard';
 
 const FPS = 30;
@@ -10,7 +10,11 @@ const RemotionRoot: React.FC = () => {
       <Composition
         id="PromptVideo"
         component={PromptVideo as unknown as React.ComponentType<Record<string, unknown>>}
-        durationInFrames={FPS * 28}
+        calculateMetadata={async ({ props }) => ({
+          durationInFrames: calcVideoDuration(props as unknown as Parameters<typeof calcVideoDuration>[0], FPS),
+          fps: FPS,
+        })}
+        durationInFrames={FPS * 30}
         fps={FPS}
         width={1080}
         height={1920}

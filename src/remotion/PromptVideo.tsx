@@ -14,12 +14,34 @@ const BLUE  = '#0085FF';
 const BG    = '#080B14';
 const CARD  = '#0C1220';
 
-function dynamicFontSize(text: string, min: number, max: number): number {
-  const len = text.length;
-  if (len < 60)  return max;
-  if (len < 120) return max - (max - min) * 0.4;
-  if (len < 200) return max - (max - min) * 0.7;
-  return min;
+// Calculate the largest font size that fills ~80% of the available box height
+function fillFontSize(text: string, boxHeight: number, boxWidth: number, min = 20, max = 88): number {
+  const usableH = boxHeight - 72;  // 36px top + bottom padding
+  const usableW = boxWidth - 88;   // 44px left + right padding
+  const lineHeight = 1.65;
+  const charWidthRatio = 0.58;     // monospace character width as fraction of fontSize
+
+  let lo = min, hi = max;
+  while (lo < hi - 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    const charsPerLine = usableW / (mid * charWidthRatio);
+    // Count lines accounting for word wrap
+    const words = text.split(' ');
+    let lines = 1, lineChars = 0;
+    for (const word of words) {
+      if (lineChars + word.length + 1 > charsPerLine && lineChars > 0) {
+        lines++; lineChars = word.length + 1;
+      } else {
+        lineChars += word.length + 1;
+      }
+    }
+    // Also count explicit newlines
+    lines += (text.match(/\n/g) || []).length;
+    const heightNeeded = lines * mid * lineHeight;
+    if (heightNeeded <= usableH * 0.82) lo = mid;
+    else hi = mid;
+  }
+  return lo;
 }
 
 // Parse text into segments for formatted rendering
@@ -83,9 +105,15 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const label       = variant === 'bad' ? '↓  OKAY PROMPT' : '✓  WELL PROMPTED';
   const cardBg      = variant === 'bad' ? '#0C1220' : '#0A1525';
   const cardBorder  = variant === 'bad' ? `${PINK}35` : `${BLUE}50`;
-  const outputColor = variant === 'bad' ? '#8090A8' : '#A0C4F0';
-  const promptSize  = dynamicFontSize(prompt, 24, 38);
-  const outputSize  = dynamicFontSize(outputSnippet, 24, 36);
+  const outputColor = variant === 'bad' ? '#7A8FA8' : '#90B8E0';
+
+  // Card dimensions (px) — used for font size calculation
+  const CARD_W = 1080 - 104; // full width minus left+right margins
+  const PROMPT_H = 490;
+  const OUTPUT_H = 530;
+
+  const promptSize = fillFontSize(prompt, PROMPT_H, CARD_W, 22, 80);
+  const outputSize = fillFontSize(outputSnippet, OUTPUT_H, CARD_W, 20, 72);
 
   // Timing
   const OUT_START  = Math.round(fps * 1.8);
@@ -197,16 +225,16 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         )}
       </div>
 
-      {/* Output card — top 720, h 530 */}
+      {/* Output card — top 720, h 530 — same style as prompt card */}
       {frame >= OUT_START && (
         <div style={{
-          position: 'absolute', top: 720, left: 52, right: 52, height: 530,
-          background: variant === 'bad' ? '#06090F' : '#060E1C',
-          border: `1.5px solid ${accent}30`,
+          position: 'absolute', top: 720, left: 52, right: 52, height: OUTPUT_H,
+          background: cardBg,
+          border: `1px solid ${cardBorder}`,
           borderLeft: `5px solid ${accent}`,
           borderRadius: 14,
           padding: '36px 44px',
-          display: 'flex', alignItems: 'flex-start',
+          display: 'flex', alignItems: 'center',
           overflow: 'hidden',
           opacity: outOpacity,
         }}>

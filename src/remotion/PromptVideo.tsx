@@ -105,7 +105,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const label       = variant === 'bad' ? '↓  OKAY PROMPT' : '✓  WELL PROMPTED';
   const cardBg      = variant === 'bad' ? '#0C1220' : '#0A1525';
   const cardBorder  = variant === 'bad' ? `${PINK}35` : `${BLUE}50`;
-  const outputColor = variant === 'bad' ? '#7A8FA8' : '#90B8E0';
+  const outputColor = variant === 'bad' ? '#7A8FA8' : '#E2E8F0';
 
   // Card dimensions (px) — used for font size calculation
   const CARD_W = 1080 - 104; // full width minus left+right margins
@@ -258,7 +258,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         }}>
           <div style={{ width: 40, height: 1.5, background: `${BLUE}50` }} />
           <span style={{ color: BLUE, fontSize: 20, fontFamily: 'sans-serif', fontWeight: 600, letterSpacing: 3 }}>
-            swipe for the fix
+            swipe for prompt upgrade &nbsp;→
           </span>
           <div style={{ width: 40, height: 1.5, background: `${BLUE}50` }} />
         </div>

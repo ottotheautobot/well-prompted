@@ -287,37 +287,36 @@ Return JSON only:
 
     const captions = JSON.parse(captionsRaw.replace(/```json\n?|\n?```/g, '').trim());
 
-    // === STAGE 5: Extract video snippets (max 15 words each) ===
+    // === STAGE 5: Extract video snippets ===
     const snippetsRaw = await callClaude(
-      `You pick the single most revealing sentence from AI outputs for a before/after prompt comparison video.
+      `You extract the most revealing excerpt from AI outputs for a before/after prompt comparison video.
 
-The video shows the prompt being typed, then ONE sentence of output fades in on screen.
-On mobile at 1080x1350px, that sentence must be legible — so max ~15 words.
+The video shows the prompt, then the output streams in on screen. The excerpt needs to show the contrast clearly.
 
 BAD OUTPUT (shows AI failure):
-"${bad_output.slice(0, 600)}"
+"${bad_output.slice(0, 800)}"
 
 GOOD OUTPUT (shows AI success):
-"${good_output.slice(0, 600)}"
+"${good_output.slice(0, 800)}"
 
 TOPIC: ${concept.topic}
 
-Pick:
-- bad_snippet: The sentence that best shows WHY the bad output fails — the most generic, vague, or placeholder-filled line. Shows the problem instantly.
-- good_snippet: The sentence that best shows WHY the good output succeeds — the most specific, concrete, impressive line. Shows the payoff instantly.
+Extract:
+- bad_snippet: 2-4 sentences that show WHY the bad output fails. The most generic, vague, hedge-filled, or hollow section. Preserve bullet formatting if the output uses bullets (use "- " prefix).
+- good_snippet: 2-4 sentences that show WHY the good output succeeds. The most specific, concrete, impressive section. Preserve bullet formatting if the output uses bullets (use "- " prefix).
 
 Rules:
-- Each snippet must be a DIRECT QUOTE from the output (copy exact words)
-- Max 20 words each
-- No ellipses — pick a complete thought
-- Must make sense without the surrounding context
+- Must be a DIRECT QUOTE (copy exact words, preserve line breaks and bullets)
+- 40-70 words per snippet — enough to make the point, not the whole output
+- No ellipses — pick a contiguous excerpt that makes sense on its own
+- If the output has a bullet list, include 2-3 bullets as the snippet
 
 Return JSON only:
 {
   "bad_snippet": "...",
   "good_snippet": "..."
 }`,
-      undefined, 200
+      undefined, 400
     );
 
     const snippets = JSON.parse(snippetsRaw.replace(/```json\n?|\n?```/g, '').trim());

@@ -1,8 +1,10 @@
 import {
-  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing,
+  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig,
 } from 'remotion';
 
-// 1080 × 1920  |  9:16 Reel  |  3 pages
+// 1080 × 1920  |  9:16 Reel  |  2 pages:
+//   Page 1 — two dynamic panes (okay prompt + well prompted, proportional height)
+//   Page 2 — why this works (big text, phone-readable)
 
 export interface WhyItem {
   title: string;
@@ -17,80 +19,62 @@ interface PromptVideoProps {
   postNumber: number;
 }
 
-const BLUE   = '#0085FF';
-const PINK   = '#FF2D78';
-const BG     = '#080B14';
-const BORDER = '#1A2540';
+const BLUE  = '#0085FF';
+const PINK  = '#FF2D78';
+const BG    = '#080B14';
+const MX    = 44;
+const W     = 1080;
+const H     = 1920;
+const CARD_W = W - MX * 2; // 992px
 
-const W = 1080;
-const H = 1920;
-const MX = 52; // horizontal margin
-
-// Largest font that fits the given box at ~82% height usage
-function fillFontSize(
-  text: string,
-  boxH: number,
-  boxW: number,
-  min = 22,
-  max = 80,
-): number {
-  const usableH = boxH - 80;
-  const usableW = boxW - 96;
-  const ratio = 0.56;
-  const lh    = 1.65;
-  let lo = min, hi = max;
-  while (lo < hi - 1) {
-    const mid = Math.floor((lo + hi) / 2);
-    const cpl   = usableW / (mid * ratio);
-    const words = text.split(' ');
-    let lines = 1, lc = 0;
-    for (const w of words) {
-      if (lc + w.length + 1 > cpl && lc > 0) { lines++; lc = w.length + 1; }
-      else lc += w.length + 1;
-    }
-    lines += (text.match(/\n/g) || []).length;
-    if (lines * mid * lh <= usableH * 0.82) lo = mid;
-    else hi = mid;
+// ── count wrapped lines for a given font size & box width ──
+function countLines(text: string, fontSize: number, boxW: number): number {
+  const usableW = boxW - 88;
+  const cpl = usableW / (fontSize * 0.56);
+  const words = text.split(' ');
+  let lines = 1, lc = 0;
+  for (const w of words) {
+    if (lc + w.length + 1 > cpl && lc > 0) { lines++; lc = w.length + 1; }
+    else lc += w.length + 1;
   }
-  return lo;
+  return lines + (text.match(/\n/g) || []).length;
 }
 
-// Cross-fade opacity for a page given its start/end frames + transition length
-function pageOpacity(
-  frame: number,
-  start: number,
-  end: number,
-  fadeDur: number,
-): number {
+// ── find the largest shared font where both cards fit in the available height ──
+function computeLayout(okay: string, well: string) {
+  const LABEL_H   = 44;   // each label row
+  const GAP       = 24;   // gap between cards
+  const CARD_PAD  = 80;   // vertical padding inside each card (top+bottom)
+  const LH        = 1.65;
+  const LOGO_BOT  = 96;   // below logo
+  const AVAIL     = H - LOGO_BOT - 20; // 1804px total
+  const CARDS_AVAIL = AVAIL - LABEL_H * 2 - GAP - 32; // for both cards combined
+
+  for (let fs = 68; fs >= 36; fs--) {
+    const lOkay = countLines(okay, fs, CARD_W);
+    const lWell = countLines(well, fs, CARD_W);
+    const hOkay = Math.ceil(lOkay * fs * LH) + CARD_PAD;
+    const hWell = Math.ceil(lWell * fs * LH) + CARD_PAD;
+    if (hOkay + hWell <= CARDS_AVAIL) {
+      return { fontSize: fs, hOkay, hWell };
+    }
+  }
+  // fallback: split proportionally at min font
+  const fs = 36;
+  const lOkay = countLines(okay, fs, CARD_W);
+  const lWell = countLines(well, fs, CARD_W);
+  const total  = lOkay + lWell || 1;
+  const hOkay  = Math.floor(CARDS_AVAIL * lOkay / total);
+  const hWell  = CARDS_AVAIL - hOkay;
+  return { fontSize: fs, hOkay, hWell };
+}
+
+// cross-fade for page transitions
+function pageAlpha(frame: number, start: number, end: number, fadeDur: number) {
   const fadeIn  = interpolate(frame, [start, start + fadeDur], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
-  const fadeOut = interpolate(frame, [end,   end  + fadeDur], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  const fadeOut = interpolate(frame, [end,   end   + fadeDur], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   return Math.min(fadeIn, fadeOut);
 }
-
-// Logo row — shared across pages
-const Logo: React.FC<{ category: string; opacity: number }> = ({ category, opacity }) => (
-  <div style={{
-    position: 'absolute', top: 24, left: MX, right: MX, height: 60,
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    opacity,
-  }}>
-    <div style={{ display: 'flex', alignItems: 'baseline' }}>
-      <span style={{ color: '#FFF',  fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>well</span>
-      <span style={{ color: BLUE,   fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>.prompted</span>
-    </div>
-    <span style={{ color: '#2C3D5C', fontSize: 15, fontWeight: 700, letterSpacing: 2.5, fontFamily: 'sans-serif' }}>
-      {category.replace(/_/g,' ').toUpperCase()}
-    </span>
-  </div>
-);
-
-// Accent bars
-const AccentBars: React.FC<{ opacity: number }> = ({ opacity }) => (
-  <>
-    <div style={{ position:'absolute', top:0, left:0, right:0, height:8, background:`linear-gradient(90deg,${PINK},${BLUE})`, opacity }} />
-    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:4, background:`linear-gradient(90deg,${BLUE},${PINK})`, opacity }} />
-  </>
-);
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
   okayPrompt, wellPrompt, whyBreakdown, category,
@@ -98,74 +82,84 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const FADE = Math.round(fps * 0.4);
-
-  // Page timing
-  const P1_START = 0;
-  const P1_END   = Math.round(fps * 5);
+  const FADE   = Math.round(fps * 0.45);
+  const P1_END = Math.round(fps * 11);   // 330 frames — read both prompts
   const P2_START = P1_END;
-  const P2_END   = Math.round(fps * 13.5);
-  const P3_START = P2_END;
-  const P3_END   = durationInFrames - FADE;
+  const P2_END   = durationInFrames - FADE;
 
-  // Global spring-in for accent bars / logo
+  const op1 = pageAlpha(frame, 0,        P1_END, FADE);
+  const op2 = pageAlpha(frame, P2_START, P2_END, FADE);
+
   const globalIn = spring({ frame, fps, from: 0, to: 1, config: { damping: 22 } });
 
-  // Per-page opacities
-  const op1 = pageOpacity(frame, P1_START, P1_END, FADE);
-  const op2 = pageOpacity(frame, P2_START, P2_END, FADE);
-  const op3 = pageOpacity(frame, P3_START, P3_END, FADE);
+  // Layout computed once
+  const { fontSize, hOkay, hWell } = computeLayout(okayPrompt, wellPrompt);
 
-  // Card dimensions — full height between logo and bottom bar
-  const CARD_TOP = 106;
-  const CARD_BOT = H - 28;
-  const CARD_H   = CARD_BOT - CARD_TOP;
-  const CARD_W   = W - MX * 2;
+  const LOGO_BOT = 96;
+  const LABEL_H  = 44;
+  const GAP      = 24;
+  const okayLabelTop = LOGO_BOT;
+  const okayCardTop  = okayLabelTop + LABEL_H;
+  const wellLabelTop = okayCardTop + hOkay + GAP;
+  const wellCardTop  = wellLabelTop + LABEL_H;
 
-  const okaySize = fillFontSize(okayPrompt, CARD_H, CARD_W, 26, 80);
-  const wellSize = fillFontSize(wellPrompt, CARD_H, CARD_W, 26, 80);
-
-  // Why breakdown item animations
-  const itemDelay = Math.round(fps * 0.5);
-  const itemFade  = Math.round(fps * 0.35);
+  // Why breakdown item timing
+  const ITEM_DELAY = Math.round(fps * 0.45);
+  const ITEM_FADE  = Math.round(fps * 0.3);
 
   return (
     <AbsoluteFill style={{ backgroundColor: BG, overflow: 'hidden' }}>
 
-      <AccentBars opacity={globalIn} />
-      <Logo category={category} opacity={globalIn} />
+      {/* Accent bars */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8,
+        background: `linear-gradient(90deg,${PINK},${BLUE})`, opacity: globalIn }} />
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 4,
+        background: `linear-gradient(90deg,${BLUE},${PINK})`, opacity: globalIn }} />
 
-      {/* ══════════════════ PAGE 1 — OKAY PROMPT ══════════════════ */}
+      {/* Logo */}
+      <div style={{
+        position: 'absolute', top: 22, left: MX, right: MX, height: 56,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        opacity: globalIn,
+      }}>
+        <div>
+          <span style={{ color: '#FFF', fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>well</span>
+          <span style={{ color: BLUE,  fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>.prompted</span>
+        </div>
+        <span style={{ color: '#2C3D5C', fontSize: 14, fontWeight: 700, letterSpacing: 3, fontFamily: 'sans-serif' }}>
+          {category.replace(/_/g,' ').toUpperCase()}
+        </span>
+      </div>
+
+      {/* ══════════ PAGE 1 — TWO DYNAMIC PANES ══════════ */}
       <div style={{ position: 'absolute', inset: 0, opacity: op1 }}>
-        {/* Label */}
+
+        {/* OKAY label */}
         <div style={{
-          position: 'absolute', top: CARD_TOP, left: MX,
-          display: 'flex', alignItems: 'center', gap: 12,
-          paddingBottom: 14,
+          position: 'absolute', top: okayLabelTop, left: MX,
+          display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <div style={{ width: 4, height: 22, borderRadius: 2, background: PINK }} />
-          <span style={{ color: PINK, fontSize: 15, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 20, borderRadius: 2, background: PINK }} />
+          <span style={{ color: PINK, fontSize: 14, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
             OKAY PROMPT
           </span>
         </div>
 
-        {/* Card */}
+        {/* OKAY card */}
         <div style={{
           position: 'absolute',
-          top: CARD_TOP + 50,
-          left: MX, right: MX,
-          bottom: 28,
+          top: okayCardTop, left: MX, right: MX, height: hOkay,
           background: '#0B1220',
           border: `1px solid ${PINK}28`,
           borderLeft: `5px solid ${PINK}`,
-          borderRadius: 18,
-          padding: '44px 48px',
+          borderRadius: 16,
+          padding: '0 44px',
           display: 'flex', alignItems: 'center',
           overflow: 'hidden',
         }}>
           <span style={{
             color: '#A8B8CC',
-            fontSize: okaySize,
+            fontSize,
             lineHeight: 1.65,
             fontFamily: 'monospace',
             wordBreak: 'break-word',
@@ -173,39 +167,33 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
             {okayPrompt}
           </span>
         </div>
-      </div>
 
-      {/* ══════════════════ PAGE 2 — WELL PROMPTED ══════════════════ */}
-      <div style={{ position: 'absolute', inset: 0, opacity: op2 }}>
-        {/* Label */}
+        {/* WELL label */}
         <div style={{
-          position: 'absolute', top: CARD_TOP, left: MX,
-          display: 'flex', alignItems: 'center', gap: 12,
-          paddingBottom: 14,
+          position: 'absolute', top: wellLabelTop, left: MX,
+          display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <div style={{ width: 4, height: 22, borderRadius: 2, background: BLUE }} />
-          <span style={{ color: BLUE, fontSize: 15, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 20, borderRadius: 2, background: BLUE }} />
+          <span style={{ color: BLUE, fontSize: 14, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
             WELL PROMPTED
           </span>
         </div>
 
-        {/* Card */}
+        {/* WELL card */}
         <div style={{
           position: 'absolute',
-          top: CARD_TOP + 50,
-          left: MX, right: MX,
-          bottom: 28,
+          top: wellCardTop, left: MX, right: MX, height: hWell,
           background: '#091525',
           border: `1px solid ${BLUE}40`,
           borderLeft: `5px solid ${BLUE}`,
-          borderRadius: 18,
-          padding: '44px 48px',
+          borderRadius: 16,
+          padding: '0 44px',
           display: 'flex', alignItems: 'center',
           overflow: 'hidden',
         }}>
           <span style={{
             color: '#C8D8F0',
-            fontSize: wellSize,
+            fontSize,
             lineHeight: 1.65,
             fontFamily: 'monospace',
             wordBreak: 'break-word',
@@ -215,62 +203,69 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         </div>
       </div>
 
-      {/* ══════════════════ PAGE 3 — WHY THIS WORKS ══════════════════ */}
-      <div style={{ position: 'absolute', inset: 0, opacity: op3 }}>
-        {/* Header */}
+      {/* ══════════ PAGE 2 — WHY THIS WORKS ══════════ */}
+      <div style={{ position: 'absolute', inset: 0, opacity: op2 }}>
+
+        {/* Header row */}
         <div style={{
-          position: 'absolute', top: CARD_TOP, left: MX, right: MX,
+          position: 'absolute', top: LOGO_BOT, left: MX, right: MX,
           display: 'flex', alignItems: 'center', gap: 16,
         }}>
-          <div style={{ width: 4, height: 22, borderRadius: 2, background: BLUE }} />
-          <span style={{ color: '#2C3D5C', fontSize: 15, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 24, borderRadius: 2, background: BLUE }} />
+          <span style={{ color: '#2C3D5C', fontSize: 15, fontWeight: 800, letterSpacing: 4, fontFamily: 'sans-serif' }}>
             WHY THIS WORKS
           </span>
-          <div style={{ flex: 1, height: 1, background: BORDER }} />
+          <div style={{ flex: 1, height: 1, background: '#1A2540' }} />
         </div>
 
-        {/* Items */}
+        {/* Items — evenly spaced in remaining height */}
         <div style={{
           position: 'absolute',
-          top: CARD_TOP + 54,
-          left: MX, right: MX, bottom: 28,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          gap: 28,
+          top: LOGO_BOT + 56,
+          left: MX, right: MX, bottom: 20,
+          display: 'flex', flexDirection: 'column',
+          justifyContent: 'space-evenly',
         }}>
           {whyBreakdown.map((item, i) => {
-            const itemStart = P3_START + Math.round(fps * 0.3) + i * itemDelay;
-            const iOp = interpolate(frame, [itemStart, itemStart + itemFade], [0, 1], {
+            const iStart = P2_START + Math.round(fps * 0.3) + i * ITEM_DELAY;
+            const iOp = interpolate(frame, [iStart, iStart + ITEM_FADE], [0, 1], {
               extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
             });
-            const iY = interpolate(frame, [itemStart, itemStart + itemFade], [18, 0], {
+            const iY = interpolate(frame, [iStart, iStart + ITEM_FADE], [20, 0], {
               extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
             });
 
             return (
               <div key={i} style={{
-                display: 'flex', gap: 22,
+                display: 'flex', gap: 24, alignItems: 'flex-start',
                 opacity: iOp, transform: `translateY(${iY}px)`,
+                background: '#0B1220',
+                border: `1px solid #1A2540`,
+                borderLeft: `4px solid ${BLUE}50`,
+                borderRadius: 18,
+                padding: '32px 36px',
               }}>
                 {/* Number */}
                 <div style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  background: `${BLUE}18`, border: `1px solid ${BLUE}30`,
+                  width: 56, height: 56, borderRadius: 14,
+                  background: `${BLUE}15`, border: `1px solid ${BLUE}35`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: BLUE, fontSize: 20, fontWeight: 800, fontFamily: 'sans-serif',
-                  flexShrink: 0, marginTop: 2,
+                  color: BLUE, fontSize: 26, fontWeight: 800, fontFamily: 'sans-serif',
+                  flexShrink: 0,
                 }}>
                   {i + 1}
                 </div>
                 {/* Text */}
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{
-                    color: '#E2E8F0', fontSize: 26, fontWeight: 700,
-                    fontFamily: 'sans-serif', lineHeight: 1.2, marginBottom: 8,
+                    color: '#E2E8F0', fontSize: 38, fontWeight: 700,
+                    fontFamily: 'sans-serif', lineHeight: 1.25, marginBottom: 10,
                   }}>
                     {item.title}
                   </div>
                   <div style={{
-                    color: '#5A6880', fontSize: 20, fontFamily: 'sans-serif', lineHeight: 1.55,
+                    color: '#5A7090', fontSize: 30, fontFamily: 'sans-serif',
+                    lineHeight: 1.5,
                   }}>
                     {item.description}
                   </div>

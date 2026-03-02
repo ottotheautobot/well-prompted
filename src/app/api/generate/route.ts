@@ -386,25 +386,20 @@ Return ONLY the caption text, nothing else.`, 600);
       good_output: JSON.stringify(whyBreakdown),
       bad_output: '',
       caption_bad: captionRaw,
-      caption_good: '', // will be updated with audio data below
+      caption_good: '',
       render_status: 'pending',
     }).select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // === STAGE 6: Generate audio (non-blocking on failure) ===
-    let audioData: { url: string; section1Sec: number; totalSec: number } | null = null;
-    if (fullScript && ELEVENLABS_KEY) {
-      try {
-        const { url } = await generateAudio(post.id, fullScript);
-        audioData = { url, section1Sec, totalSec };
-        await supabase.from('posts').update({
-          caption_good: JSON.stringify(audioData),
-        }).eq('id', post.id);
-      } catch (e: any) {
-        console.error('Audio generation failed (non-fatal):', e.message);
-      }
-    }
+    // === STAGE 6: Kick off audio generation async (separate endpoint, avoids timeout) ===
+    const audioData = null;
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'https://well-prompted-pi.vercel.app';
+    fetch(`${base}/api/generate-audio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.PORTAL_PASSWORD}` },
+      body: JSON.stringify({ id: post.id }),
+    }).catch(() => {}); // fire and forget
 
     // Telegram notification
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {

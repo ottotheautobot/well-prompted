@@ -429,6 +429,40 @@ export default function QueuePage() {
                       </div>
                     )}
 
+                    {/* Audio status + generate button */}
+                    {post.format === 'before_after' && (() => {
+                      let audioData: {url?:string;totalSec?:number;script?:{section1:string;section2:string}} | null = null;
+                      try { audioData = JSON.parse(post.caption_good || '{}'); } catch {}
+                      const hasAudio = !!audioData?.url;
+                      return (
+                        <div className="mt-5 pt-4 border-t border-[#1A2540] flex items-center gap-4">
+                          {hasAudio ? (
+                            <div className="flex items-center gap-3 flex-1">
+                              <span className="text-xs text-green-500 font-bold uppercase tracking-widest">🎙 Audio Ready</span>
+                              <span className="text-xs text-gray-600">~{Math.round(audioData!.totalSec || 0)}s</span>
+                              <audio src={audioData!.url} controls className="h-8 flex-1" style={{filter:'invert(0.8)'}} />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-gray-600">No audio</span>
+                              <button
+                                onClick={async () => {
+                                  const btn = document.getElementById('audio-btn-' + post.id);
+                                  if (btn) btn.textContent = 'Generating...';
+                                  await fetch('/api/generate-audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: post.id }) });
+                                  await fetchPosts(filter);
+                                }}
+                                id={'audio-btn-' + post.id}
+                                className="text-xs bg-[#0085FF15] text-[#0085FF] border border-[#0085FF30] px-3 py-1.5 rounded-lg hover:bg-[#0085FF25] transition"
+                              >
+                                Generate Audio
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {/* Techniques */}
                     {post.techniques?.length > 0 && (
                       <div className="flex gap-2 mt-4 flex-wrap">

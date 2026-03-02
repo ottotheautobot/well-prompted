@@ -100,6 +100,19 @@ export default function QueuePage() {
     setActionLoading(null);
   };
 
+  const handlePublishNow = async (id: string) => {
+    setActionLoading(id + '-publish');
+    const res = await fetch('/api/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) { setPosts(posts.filter(p => p.id !== id)); alert('Published to Instagram! ✅'); }
+    else alert('Publish failed: ' + (data.error || 'Unknown error'));
+    setActionLoading(null);
+  };
+
   const handleReject = async (id: string) => {
     setActionLoading(id + '-reject');
     await fetch('/api/approve', {
@@ -449,8 +462,21 @@ export default function QueuePage() {
                       )}
 
                       {post.status === 'scheduled' && (
-                        <div className="text-sm text-gray-400">
-                          Scheduled for {post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York' }) : 'TBD'} ET
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm text-gray-400">
+                            {post.scheduled_at
+                              ? (new Date(post.scheduled_at) < new Date()
+                                ? <span className="text-yellow-400">⏰ Past due — {new Date(post.scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York' })} ET</span>
+                                : `Scheduled for ${new Date(post.scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York' })} ET`)
+                              : 'TBD'}
+                          </div>
+                          <button
+                            onClick={() => handlePublishNow(post.id)}
+                            disabled={actionLoading === post.id + '-publish'}
+                            className="bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition disabled:opacity-50"
+                          >
+                            {actionLoading === post.id + '-publish' ? '⏳ Publishing...' : '🚀 Publish Now'}
+                          </button>
                         </div>
                       )}
                     </div>

@@ -78,6 +78,20 @@ export default function QueuePage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this post permanently?')) return;
+    setActionLoading(id + '-delete');
+    const res = await fetch('/api/delete', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.success) setPosts(posts.filter(p => p.id !== id));
+    else alert(data.error || 'Delete failed');
+    setActionLoading(null);
+  };
+
   const handleGenerateFormat = async (endpoint: string) => {
     setGenerating(true);
     try {
@@ -425,7 +439,7 @@ export default function QueuePage() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-3 mt-6 pt-4 border-t border-[#1A2540]">
+                    <div className="flex gap-3 mt-6 pt-4 border-t border-[#1A2540] items-center justify-between">
                       {post.status === 'pending_review' && (
                         <>
                           <button
@@ -491,6 +505,17 @@ export default function QueuePage() {
                             {actionLoading === post.id + '-publish' ? '⏳ Publishing...' : '🚀 Publish Now'}
                           </button>
                         </div>
+                      )}
+
+                      {/* Delete — available on all non-limbo statuses */}
+                      {!['rendering','publishing'].includes(post.status) && (
+                        <button
+                          onClick={() => handleDelete(post.id)}
+                          disabled={actionLoading === post.id + '-delete'}
+                          className="ml-auto text-red-500 border border-red-900 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-950 transition disabled:opacity-50"
+                        >
+                          {actionLoading === post.id + '-delete' ? '⏳' : '🗑 Delete'}
+                        </button>
                       )}
                     </div>
                   </div>

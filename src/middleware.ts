@@ -16,7 +16,8 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/api/render') ||
     pathname.startsWith('/api/generate') ||
     pathname.startsWith('/api/schedule') ||
-    pathname.startsWith('/api/publish');
+    pathname.startsWith('/api/publish') ||
+    pathname.startsWith('/api/delete');
 
   if (!PORTAL_PASSWORD) return NextResponse.next(); // no password set = dev mode
 
@@ -42,5 +43,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/queue/:path*', '/schedule/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/schedule/:path*', '/api/publish/:path*'],
+  matcher: ['/queue/:path*', '/schedule/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/schedule/:path*', '/api/publish/:path*', '/api/delete/:path*'],
 };

@@ -35,7 +35,7 @@ function LoginForm() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold">
             <span className="text-white">well</span>
-            <span className="text-[#4D9EFF]">.prompted</span>
+            <span className="text-[#0085FF]">.prompted</span>
           </h1>
           <p className="text-gray-500 text-sm mt-2">Content portal</p>
         </div>
@@ -46,14 +46,14 @@ function LoginForm() {
             placeholder="Password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            className="w-full px-4 py-3 bg-[#0F1520] border border-[#1A2540] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#4D9EFF] text-sm"
+            className="w-full px-4 py-3 bg-[#0F1520] border border-[#1A2540] rounded-lg text-white placeholder-gray-600 focus:outline-none focus:border-[#0085FF] text-sm"
             autoFocus
           />
           {error && <p className="text-[#FF2D78] text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading || !password}
-            className="w-full py-3 bg-[#4D9EFF] text-white font-semibold rounded-lg hover:bg-[#3D8EEF] disabled:opacity-50 transition-colors text-sm"
+            className="w-full py-3 bg-[#0085FF] text-white font-semibold rounded-lg hover:bg-[#3D8EEF] disabled:opacity-50 transition-colors text-sm"
           >
             {loading ? 'Checking...' : 'Enter'}
           </button>

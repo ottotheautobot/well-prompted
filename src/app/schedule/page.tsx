@@ -77,7 +77,7 @@ export default function SchedulePage() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#080B14] flex items-center justify-center">
-      <div className="text-[#4D9EFF] text-lg animate-pulse">Loading schedule...</div>
+      <div className="text-[#0085FF] text-lg animate-pulse">Loading schedule...</div>
     </div>
   );
 
@@ -89,19 +89,19 @@ export default function SchedulePage() {
           <div>
             <h1 className="text-2xl font-bold text-white">
               <span className="text-white">well</span>
-              <span className="text-[#4D9EFF]">.prompted</span>
+              <span className="text-[#0085FF]">.prompted</span>
               <span className="text-gray-600 ml-3 text-lg font-normal">/ schedule</span>
             </h1>
             <p className="text-gray-500 text-sm mt-1">2-week posting calendar · ET timezone</p>
           </div>
           <div className="flex gap-3">
-            <a href="/queue" className="px-4 py-2 text-sm text-gray-400 border border-[#1A2540] rounded-lg hover:border-[#4D9EFF] transition-colors">
+            <a href="/queue" className="px-4 py-2 text-sm text-gray-400 border border-[#1A2540] rounded-lg hover:border-[#0085FF] transition-colors">
               ← Queue
             </a>
             <button
               onClick={autoFill}
               disabled={filling}
-              className="px-4 py-2 text-sm bg-[#4D9EFF] text-white font-semibold rounded-lg hover:bg-[#3D8EEF] disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-sm bg-[#0085FF] text-white font-semibold rounded-lg hover:bg-[#3D8EEF] disabled:opacity-50 transition-colors"
             >
               {filling ? 'Filling...' : '⚡ Auto-fill Slots'}
             </button>
@@ -120,7 +120,7 @@ export default function SchedulePage() {
                   onDragStart={() => setDragging(post.id)}
                   className={`px-3 py-2 rounded-lg border cursor-grab text-sm transition-all ${
                     dragging === post.id
-                      ? 'border-[#4D9EFF] bg-[#4D9EFF15] text-[#4D9EFF]'
+                      ? 'border-[#0085FF] bg-[#0085FF15] text-[#0085FF]'
                       : 'border-[#1A2540] bg-[#0F1520] text-gray-300 hover:border-[#2A3550]'
                   }`}
                 >
@@ -147,14 +147,14 @@ export default function SchedulePage() {
                   scheduledPost
                     ? 'border-[#1A2540] bg-[#0A0F1A]'
                     : dragging
-                    ? 'border-[#4D9EFF40] bg-[#4D9EFF08] border-dashed'
+                    ? 'border-[#0085FF40] bg-[#0085FF08] border-dashed'
                     : 'border-[#1A2540] bg-[#080B14] hover:border-[#2A3550]'
-                } ${isToday ? 'border-l-2 border-l-[#4D9EFF]' : ''}`}
+                } ${isToday ? 'border-l-2 border-l-[#0085FF]' : ''}`}
               >
                 {/* Time */}
                 <div className="w-44 shrink-0">
                   <div className="text-sm text-gray-300 font-mono">{formatTime(slot.slot_time)}</div>
-                  {isToday && <div className="text-xs text-[#4D9EFF] mt-0.5">today</div>}
+                  {isToday && <div className="text-xs text-[#0085FF] mt-0.5">today</div>}
                 </div>
 
                 {/* Content */}

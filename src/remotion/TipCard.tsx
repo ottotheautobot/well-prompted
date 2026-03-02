@@ -10,7 +10,7 @@ export interface TipCardProps {
 }
 
 const ACCENT_PINK = '#FF2D78';
-const ACCENT_BLUE = '#4D9EFF';
+const ACCENT_BLUE = '#0085FF';
 const BG = '#080B14';
 const CARD_BG = '#0F1520';
 

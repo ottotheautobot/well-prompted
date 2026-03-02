@@ -193,10 +193,10 @@ export default function QueuePage() {
         <div className="flex items-center gap-8">
           <div>
             <span className="text-white font-bold text-xl">well</span>
-            <span className="text-[#4D9EFF] font-bold text-xl">.prompted</span>
+            <span className="text-[#0085FF] font-bold text-xl">.prompted</span>
           </div>
           <nav className="flex gap-4 text-sm">
-            <a href="/queue" className="text-white font-medium border-b border-[#4D9EFF] pb-1">Queue</a>
+            <a href="/queue" className="text-white font-medium border-b border-[#0085FF] pb-1">Queue</a>
             <a href="/schedule" className="text-gray-400 hover:text-white transition">Schedule</a>
             <a href="/settings" className="text-gray-400 hover:text-white transition">Settings</a>
           </nav>
@@ -205,14 +205,14 @@ export default function QueuePage() {
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="bg-[#4D9EFF] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition disabled:opacity-50 flex items-center gap-2"
+            className="bg-[#0085FF] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-400 transition disabled:opacity-50 flex items-center gap-2"
           >
             {generating ? '⏳' : '+'} Before/After
           </button>
           <button
             onClick={handleGenerateTips}
             disabled={generating}
-            className="bg-[#4D9EFF22] border border-[#4D9EFF55] text-[#4D9EFF] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#4D9EFF33] transition disabled:opacity-50"
+            className="bg-[#0085FF22] border border-[#0085FF55] text-[#0085FF] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#0085FF33] transition disabled:opacity-50"
           >
             + Tip List
           </button>
@@ -253,7 +253,7 @@ export default function QueuePage() {
           <div className="text-center py-20">
             <div className="text-gray-500 mb-2">No posts in {STATUS_LABELS[filter]}.</div>
             {filter === 'pending_review' && (
-              <button onClick={handleGenerate} disabled={generating} className="text-[#4D9EFF] text-sm hover:underline mt-2">
+              <button onClick={handleGenerate} disabled={generating} className="text-[#0085FF] text-sm hover:underline mt-2">
                 Generate your first post →
               </button>
             )}
@@ -274,7 +274,7 @@ export default function QueuePage() {
                     <span className={`text-xs px-2 py-1 rounded border shrink-0 ${
                       post.format === 'tip_list' ? 'bg-purple-900/40 text-purple-400 border-purple-800' :
                       post.format === 'myth_bust' ? 'bg-orange-900/40 text-orange-400 border-orange-800' :
-                      'bg-[#4D9EFF15] text-[#4D9EFF] border-[#4D9EFF25]'
+                      'bg-[#0085FF15] text-[#0085FF] border-[#0085FF25]'
                     }`}>
                       {post.format === 'tip_list' ? '📋 Tip List' : post.format === 'myth_bust' ? '💥 Myth Bust' : '↕ Before/After'}
                     </span>
@@ -325,16 +325,16 @@ export default function QueuePage() {
                                 <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest mb-2">❌ Myth</div>
                                 <div className="text-gray-300 text-sm">{d.myth_statement}</div>
                               </div>
-                              <div className="bg-[#0A1A0A] border border-[#4D9EFF40] rounded-lg p-4">
-                                <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest mb-2">✅ Reality</div>
+                              <div className="bg-[#0A1A0A] border border-[#0085FF40] rounded-lg p-4">
+                                <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest mb-2">✅ Reality</div>
                                 <div className="text-gray-300 text-sm">{d.reality}</div>
                               </div>
                               <div className="bg-[#080B14] border border-[#1A2540] rounded-lg p-4">
                                 <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Proof</div>
                                 <div className="text-gray-400 text-sm">{d.proof}</div>
                               </div>
-                              <div className="bg-[#080B14] border border-[#4D9EFF25] rounded-lg p-4">
-                                <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest mb-2">Fix</div>
+                              <div className="bg-[#080B14] border border-[#0085FF25] rounded-lg p-4">
+                                <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest mb-2">Fix</div>
                                 <div className="text-gray-300 text-sm">{d.fix}</div>
                               </div>
                             </div>
@@ -365,12 +365,12 @@ export default function QueuePage() {
                       </div>
                       {/* GOOD */}
                       <div className="space-y-3">
-                        <div className="text-xs text-[#4D9EFF] font-bold uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#4D9EFF]" />Well Prompted
+                        <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#0085FF]" />Well Prompted
                         </div>
-                        <div className="bg-[#080B14] border border-[#4D9EFF30] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
+                        <div className="bg-[#080B14] border border-[#0085FF30] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
                         <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
-                        <div className="bg-[#080B14] border border-[#4D9EFF20] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
+                        <div className="bg-[#080B14] border border-[#0085FF20] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
                           {(post as any).good_output_snippet || post.good_output.slice(0, 120) + '…'}
                         </div>
                         <details className="text-xs text-gray-600 cursor-pointer">
@@ -402,11 +402,11 @@ export default function QueuePage() {
                           )}
                           {post.video_good_url && (
                             <div>
-                              <div className="text-xs text-[#4D9EFF] mb-2">Well Prompted Video</div>
+                              <div className="text-xs text-[#0085FF] mb-2">Well Prompted Video</div>
                               <video
                                 src={post.video_good_url}
                                 controls
-                                className="w-full rounded-lg border border-[#4D9EFF30]"
+                                className="w-full rounded-lg border border-[#0085FF30]"
                                 style={{ maxHeight: 300 }}
                               />
                             </div>
@@ -431,7 +431,7 @@ export default function QueuePage() {
                           <button
                             onClick={() => handleApprove(post.id)}
                             disabled={actionLoading === post.id + '-approve'}
-                            className="bg-[#4D9EFF] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50"
+                            className="bg-[#0085FF] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50"
                           >
                             ✓ Approve Content
                           </button>
@@ -460,7 +460,7 @@ export default function QueuePage() {
                           <button
                             onClick={() => handleVideoApprove(post.id, 'approve')}
                             disabled={actionLoading === post.id + '-video-approve'}
-                            className="bg-[#4D9EFF] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50"
+                            className="bg-[#0085FF] text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-400 transition disabled:opacity-50"
                           >
                             ✓ Approve & Schedule
                           </button>

@@ -10,7 +10,7 @@ interface PromptVideoProps {
 }
 
 const PINK  = '#FF2D78';
-const BLUE  = '#4D9EFF';
+const BLUE  = '#0085FF';
 const BG    = '#080B14';
 const CARD  = '#0C1220';
 

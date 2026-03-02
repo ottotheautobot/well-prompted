@@ -118,7 +118,7 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
   const WELL_TYPE_START = Math.round(fps * 1.2);
   const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
   const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
-  const P1_END          = WELL_TYPE_END + Math.round(fps * 2.5);
+  const P1_END          = WELL_TYPE_END + Math.round(fps * 5);
   const itemCount       = props.whyBreakdown?.length || 4;
   const ITEM_DELAY      = Math.round(fps * 0.45);
   const whyAnimDur      = Math.round(fps * 0.3) + itemCount * ITEM_DELAY + Math.round(fps * 0.3);
@@ -140,10 +140,10 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
   const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
 
-  // Page 1 ends: audio-driven if available, otherwise type-speed + hold
+  // Page 1 ends: audio-driven if available, otherwise type-speed + 5s hold
   const P1_END = section1Sec
     ? Math.round(section1Sec * fps) + Math.round(fps * 0.5)
-    : WELL_TYPE_END + Math.round(fps * 2.5);
+    : WELL_TYPE_END + Math.round(fps * 5);
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;
 

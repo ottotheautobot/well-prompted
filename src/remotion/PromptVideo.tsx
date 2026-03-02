@@ -19,8 +19,9 @@ interface PromptVideoProps {
   postNumber: number;
   audioUrl?: string;
   section1Sec?: number;
+  totalAudioSec?: number; // actual full narration duration — video must not end before this
   musicUrl?: string;
-  musicStartSec?: number; // where to start in the track (skip intros)
+  musicStartSec?: number;
 }
 
 const BLUE  = '#0085FF';
@@ -103,31 +104,34 @@ function pageAlpha(frame: number, start: number, end: number, fadeDur: number) {
 
 // Called by calculateMetadata — same math as inside the component
 export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
-  // If audio drives the duration, use it
+  const itemCount  = props.whyBreakdown?.length || 4;
+  const ITEM_DELAY = Math.round(fps * 0.45);
+  const whyAnimDur = Math.round(fps * 0.3) + itemCount * ITEM_DELAY;
+  const FADE       = Math.round(fps * 0.45);
+  const HOLD_END   = Math.round(fps * 3); // 3s hold at very end after why page
+
+  let p1End: number;
   if (props.section1Sec) {
-    // page 1 = section1 audio + small buffer, page 2 = remaining audio + 2s hold
-    const itemCount   = props.whyBreakdown?.length || 4;
-    const ITEM_DELAY  = Math.round(fps * 0.45);
-    const whyAnimDur  = Math.round(fps * 0.3) + itemCount * ITEM_DELAY;
-    const p2Duration  = whyAnimDur + Math.round(fps * 10);
-    const p1End       = Math.round(props.section1Sec * fps) + Math.round(fps * 0.5);
-    return p1End + p2Duration + Math.round(fps * 0.5);
+    // Audio-driven: section1 finishes + 5s reading hold
+    p1End = Math.round(props.section1Sec * fps) + Math.round(fps * 5);
+  } else {
+    const WELL_TYPE_START = Math.round(fps * 1.2);
+    const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
+    p1End = WELL_TYPE_START + typeDuration + Math.round(fps * 5);
   }
-  // Fallback: type-speed based
-  const FADE            = Math.round(fps * 0.45);
-  const WELL_TYPE_START = Math.round(fps * 1.2);
-  const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
-  const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
-  const P1_END          = WELL_TYPE_END + Math.round(fps * 5);
-  const itemCount       = props.whyBreakdown?.length || 4;
-  const ITEM_DELAY      = Math.round(fps * 0.45);
-  const whyAnimDur      = Math.round(fps * 0.3) + itemCount * ITEM_DELAY + Math.round(fps * 0.3);
-  const P2_DURATION     = whyAnimDur + Math.round(fps * 10);
-  return P1_END + FADE + P2_DURATION + FADE;
+
+  const computed = p1End + FADE + whyAnimDur + HOLD_END + FADE;
+
+  // Hard floor: video must outlast the full narration + 2s buffer
+  const audioFloor = props.totalAudioSec
+    ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 2)
+    : 0;
+
+  return Math.max(computed, audioFloor);
 }
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
-  okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, section1Sec,
+  okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, section1Sec, totalAudioSec,
   musicUrl, musicStartSec = 0,
 }) => {
   const frame = useCurrentFrame();
@@ -140,9 +144,9 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
   const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
 
-  // Page 1 ends: audio-driven if available, otherwise type-speed + 5s hold
+  // Page 1 ends: narration section 1 finish + 5s reading hold
   const P1_END = section1Sec
-    ? Math.round(section1Sec * fps) + Math.round(fps * 0.5)
+    ? Math.round(section1Sec * fps) + Math.round(fps * 5)
     : WELL_TYPE_END + Math.round(fps * 5);
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;

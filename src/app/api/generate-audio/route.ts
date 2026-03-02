@@ -18,10 +18,12 @@ const s3 = new S3Client({
 
 const S3_BUCKET        = process.env.REMOTION_S3_BUCKET || 'remotionlambda-useast2-v6np42nzpq';
 const ELEVENLABS_KEY   = process.env.ELEVENLABS_API_KEY!;
-const ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID || '4tRn1lSkEn13EVTuqb0g';
+const ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID || 'q0IMILNRPxOgtBTS4taI';
+const SPEECH_SPEED     = 1.1; // slightly brisk — keeps energy up, fits in ~25-30s
 
-function estimateSec(text: string) {
-  return (text.trim().split(/\s+/).length / 150) * 60;
+// At speed 1.1, effective wpm ≈ 165
+function estimateSec(text: string, speed = SPEECH_SPEED) {
+  return (text.trim().split(/\s+/).length / (150 * speed)) * 60;
 }
 
 export async function POST(req: NextRequest) {
@@ -50,14 +52,14 @@ The video has two pages:
 - Page 1: Okay prompt shown, then well prompted version types in (~10-12 seconds)
 - Page 2: "Why this works" breakdown appears item by item (~15-18 seconds)
 
-SECTION 1 (35-45 words, plays over page 1):
+SECTION 1 (30-38 words MAX, plays over page 1):
 - One sentence calling out what's wrong with the okay prompt. Make it sting slightly.
 - "Here's the upgrade." as a natural pivot.
-- 1-2 sentences on what the well prompted version does differently — what it adds and why.
+- 1 sentence on what the well prompted version does differently — what it adds and why.
 
-SECTION 2 (50-65 words, plays over page 2):
+SECTION 2 (40-52 words MAX, plays over page 2):
 - Natural bridge: "Here's why it works." or similar.
-- One sentence per breakdown item. Conversational, punchy.
+- One short sentence per breakdown item. Punchy. No padding.
 
 Rules:
 - Warm but direct. Like a smart colleague explaining something useful.
@@ -85,7 +87,8 @@ Return JSON only:
     body: JSON.stringify({
       text: fullScript,
       model_id: 'eleven_turbo_v2_5',
-      voice_settings: { stability: 0.45, similarity_boost: 0.82, style: 0.15, use_speaker_boost: true },
+      speed: SPEECH_SPEED,
+      voice_settings: { stability: 0.48, similarity_boost: 0.82, style: 0.12, use_speaker_boost: true },
     }),
   });
   if (!ttsRes.ok) {

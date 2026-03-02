@@ -10,112 +10,122 @@ const IG_API = 'https://graph.instagram.com/v19.0';
 const IG_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN!;
 const IG_ACCOUNT_ID = process.env.INSTAGRAM_ACCOUNT_ID!;
 
-async function createVideoContainer(videoUrl: string, caption?: string, isCarouselItem = false): Promise<string> {
-  const params: Record<string, string> = {
-    media_type: 'REELS', // Using REELS for video carousels
-    video_url: videoUrl,
-    access_token: IG_TOKEN,
-  };
-  if (isCarouselItem) {
-    params.is_carousel_item = 'true';
-  }
-  if (caption && !isCarouselItem) {
-    params.caption = caption;
-  }
-
-  const res = await fetch(`${IG_API}/${IG_ACCOUNT_ID}/media`, {
+async function igPost(path: string, body: Record<string, string>) {
+  const res = await fetch(`${IG_API}/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify({ ...body, access_token: IG_TOKEN }),
   });
-  const data = await res.json();
-  if (!data.id) throw new Error(`Failed to create container: ${JSON.stringify(data)}`);
-  return data.id;
+  return res.json();
 }
 
-async function waitForContainer(containerId: string, maxWaitMs = 120000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < maxWaitMs) {
-    const res = await fetch(`${IG_API}/${containerId}?fields=status_code,status&access_token=${IG_TOKEN}`);
-    const data = await res.json();
-    if (data.status_code === 'FINISHED') return;
-    if (data.status_code === 'ERROR') throw new Error(`Container processing failed: ${data.status}`);
-    await new Promise(r => setTimeout(r, 5000));
-  }
-  throw new Error('Container processing timed out');
+async function igGet(path: string) {
+  const res = await fetch(`${IG_API}/${path}&access_token=${IG_TOKEN}`);
+  return res.json();
 }
 
-async function createCarouselContainer(itemIds: string[], caption: string): Promise<string> {
-  const res = await fetch(`${IG_API}/${IG_ACCOUNT_ID}/media`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      media_type: 'CAROUSEL',
-      children: itemIds.join(','),
-      caption,
-      access_token: IG_TOKEN,
-    }),
-  });
-  const data = await res.json();
-  if (!data.id) throw new Error(`Failed to create carousel: ${JSON.stringify(data)}`);
-  return data.id;
+async function getContainerStatus(containerId: string): Promise<string> {
+  const data = await igGet(`${containerId}?fields=status_code,status`);
+  return data.status_code || 'UNKNOWN';
 }
 
-async function publishContainer(containerId: string): Promise<string> {
-  const res = await fetch(`${IG_API}/${IG_ACCOUNT_ID}/media_publish`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ creation_id: containerId, access_token: IG_TOKEN }),
-  });
-  const data = await res.json();
-  if (!data.id) throw new Error(`Failed to publish: ${JSON.stringify(data)}`);
-  return data.id;
-}
-
+// POST: kick off publish — creates containers, returns container IDs for polling
+// Called again with container IDs to check status and finalize
 export async function POST(req: NextRequest) {
-  const { id } = await req.json();
+  const body = await req.json();
+  const { id, step, bad_container_id, good_container_id, carousel_id } = body;
+
   if (!id) return NextResponse.json({ error: 'Missing post id' }, { status: 400 });
 
-  const { data: post, error: fetchErr } = await supabase
-    .from('posts')
-    .select('*')
-    .eq('id', id)
-    .single();
-
+  const { data: post, error: fetchErr } = await supabase.from('posts').select('*').eq('id', id).single();
   if (fetchErr || !post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
-  if (!post.video_bad_url || !post.video_good_url) return NextResponse.json({ error: 'Videos not ready' }, { status: 400 });
 
-  // Mark as publishing
-  await supabase.from('posts').update({ status: 'publishing' }).eq('id', id);
+  // STEP 1: Create item containers
+  if (!step || step === 'create') {
+    if (!post.video_bad_url || !post.video_good_url) {
+      return NextResponse.json({ error: 'Videos not ready — render first' }, { status: 400 });
+    }
 
-  try {
-    // Step 1: Create carousel item containers
-    console.log('Creating carousel item containers...');
-    const [badId, goodId] = await Promise.all([
-      createVideoContainer(post.video_bad_url, undefined, true),
-      createVideoContainer(post.video_good_url, undefined, true),
+    await supabase.from('posts').update({ status: 'publishing' }).eq('id', id);
+
+    const [badRes, goodRes] = await Promise.all([
+      igPost(`${IG_ACCOUNT_ID}/media`, { media_type: 'REELS', video_url: post.video_bad_url, is_carousel_item: 'true' }),
+      igPost(`${IG_ACCOUNT_ID}/media`, { media_type: 'REELS', video_url: post.video_good_url, is_carousel_item: 'true' }),
     ]);
 
-    // Step 2: Wait for both to finish processing
-    console.log('Waiting for containers:', badId, goodId);
-    await Promise.all([waitForContainer(badId), waitForContainer(goodId)]);
+    if (!badRes.id || !goodRes.id) {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: JSON.stringify(badRes.error || goodRes.error) }).eq('id', id);
+      return NextResponse.json({ error: 'Failed to create containers', badRes, goodRes }, { status: 500 });
+    }
 
-    // Step 3: Create carousel container with caption (use bad slide caption as main)
+    return NextResponse.json({
+      step: 'waiting_items',
+      bad_container_id: badRes.id,
+      good_container_id: goodRes.id,
+      message: 'Item containers created. Poll /api/publish with step=check_items to check status.',
+    });
+  }
+
+  // STEP 2: Check item containers, create carousel when ready
+  if (step === 'check_items') {
+    const [badStatus, goodStatus] = await Promise.all([
+      getContainerStatus(bad_container_id),
+      getContainerStatus(good_container_id),
+    ]);
+
+    if (badStatus === 'ERROR' || goodStatus === 'ERROR') {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: `Item container error: bad=${badStatus} good=${goodStatus}` }).eq('id', id);
+      return NextResponse.json({ error: 'Item container failed', badStatus, goodStatus }, { status: 500 });
+    }
+
+    if (badStatus !== 'FINISHED' || goodStatus !== 'FINISHED') {
+      return NextResponse.json({ step: 'waiting_items', bad_container_id, good_container_id, badStatus, goodStatus, ready: false });
+    }
+
+    // Both ready — create carousel
     const caption = post.caption_bad || '';
-    const carouselId = await createCarouselContainer([badId, goodId], caption);
+    const carouselRes = await igPost(`${IG_ACCOUNT_ID}/media`, {
+      media_type: 'CAROUSEL',
+      children: `${bad_container_id},${good_container_id}`,
+      caption,
+    });
 
-    // Step 4: Publish
-    console.log('Publishing carousel:', carouselId);
-    const mediaId = await publishContainer(carouselId);
+    if (!carouselRes.id) {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: JSON.stringify(carouselRes.error) }).eq('id', id);
+      return NextResponse.json({ error: 'Failed to create carousel', carouselRes }, { status: 500 });
+    }
 
-    // Step 5: Update DB
+    return NextResponse.json({ step: 'check_carousel', carousel_id: carouselRes.id, ready: false });
+  }
+
+  // STEP 3: Check carousel container, publish when ready
+  if (step === 'check_carousel') {
+    const status = await getContainerStatus(carousel_id);
+
+    if (status === 'ERROR') {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: `Carousel container error: ${status}` }).eq('id', id);
+      return NextResponse.json({ error: 'Carousel container failed' }, { status: 500 });
+    }
+
+    if (status !== 'FINISHED') {
+      return NextResponse.json({ step: 'check_carousel', carousel_id, status, ready: false });
+    }
+
+    // Publish!
+    const publishRes = await igPost(`${IG_ACCOUNT_ID}/media_publish`, { creation_id: carousel_id });
+
+    if (!publishRes.id) {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: JSON.stringify(publishRes.error) }).eq('id', id);
+      return NextResponse.json({ error: 'Failed to publish', publishRes }, { status: 500 });
+    }
+
     await supabase.from('posts').update({
       status: 'published',
       published_at: new Date().toISOString(),
-      instagram_media_id: mediaId,
+      instagram_media_id: publishRes.id,
     }).eq('id', id);
 
-    // Notify via Telegram
+    // Notify
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
       await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: 'POST',
@@ -123,46 +133,41 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           chat_id: process.env.TELEGRAM_CHAT_ID,
           parse_mode: 'HTML',
-          text: `✅ <b>Post published to Instagram!</b>\n\n"${post.bad_prompt?.slice(0, 60)}..."\n\nMedia ID: ${mediaId}\nhttps://instagram.com/well.prompted`,
+          text: `✅ <b>Published to Instagram!</b>\n\n"${(post.bad_prompt || '').slice(0, 60)}..."\n\nMedia ID: ${publishRes.id}\nhttps://instagram.com/well.prompted`,
         }),
       });
     }
 
-    return NextResponse.json({ success: true, mediaId });
-  } catch (err: any) {
-    console.error('Publish error:', err);
-    await supabase.from('posts').update({ status: 'scheduled', publish_error: err.message }).eq('id', id);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ success: true, mediaId: publishRes.id });
   }
+
+  return NextResponse.json({ error: 'Unknown step' }, { status: 400 });
 }
 
-// GET: check for due posts and publish them (called by cron)
+// GET: auto-publish due posts (called by cron)
 export async function GET() {
   const now = new Date().toISOString();
   const { data: duePosts } = await supabase
     .from('posts')
-    .select('id, bad_prompt, scheduled_at')
+    .select('id, bad_prompt')
     .eq('status', 'scheduled')
     .lte('scheduled_at', now)
     .not('video_bad_url', 'is', null)
     .not('video_good_url', 'is', null);
 
-  if (!duePosts?.length) return NextResponse.json({ published: 0 });
+  if (!duePosts?.length) return NextResponse.json({ published: 0, message: 'No posts due' });
 
+  // Kick off publish step 1 for each due post (client must poll to complete)
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'https://well-prompted-pi.vercel.app';
   const results = [];
   for (const post of duePosts) {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://well-prompted-pi.vercel.app'}/api/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: post.id }),
-      });
-      const data = await res.json();
-      results.push({ id: post.id, ...data });
-    } catch (e: any) {
-      results.push({ id: post.id, error: e.message });
-    }
+    const res = await fetch(`${base}/api/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: post.id, step: 'create' }),
+    });
+    results.push({ id: post.id, ...(await res.json()) });
   }
 
-  return NextResponse.json({ published: results.filter(r => r.success).length, results });
+  return NextResponse.json({ kicked_off: results.length, results });
 }

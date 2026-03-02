@@ -102,14 +102,27 @@ export default function QueuePage() {
 
   const handlePublishNow = async (id: string) => {
     setActionLoading(id + '-publish');
-    const res = await fetch('/api/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    const data = await res.json();
-    if (data.success) { setPosts(posts.filter(p => p.id !== id)); alert('Published to Instagram! ✅'); }
-    else alert('Publish failed: ' + (data.error || 'Unknown error'));
+    try {
+      // Step 1: create containers
+      let res = await fetch('/api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, step: 'create' }) });
+      let data = await res.json();
+      if (data.error) throw new Error(data.error);
+
+      // Poll until published
+      let attempts = 0;
+      while (data.step !== undefined && !data.success && attempts < 40) {
+        await new Promise(r => setTimeout(r, 8000));
+        res = await fetch('/api/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, step: data.step, ...data }) });
+        data = await res.json();
+        if (data.error) throw new Error(data.error);
+        attempts++;
+      }
+
+      if (data.success) { setPosts(posts.filter(p => p.id !== id)); alert('Published to Instagram! ✅'); }
+      else alert('Timed out — check queue for status');
+    } catch (e: any) {
+      alert('Publish failed: ' + e.message);
+    }
     setActionLoading(null);
   };
 

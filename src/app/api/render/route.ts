@@ -21,9 +21,15 @@ export async function POST(req: NextRequest) {
   await supabase.from('posts').update({ render_status: 'rendering', status: 'rendering' }).eq('id', id);
 
   try {
-    // Parse why breakdown — stored as JSON in good_output
     let whyBreakdown = [];
     try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
+
+    let audioUrl: string | undefined;
+    let section1Sec: number | undefined;
+    try {
+      const audioData = JSON.parse(post.caption_good || '{}');
+      if (audioData.url) { audioUrl = audioData.url; section1Sec = audioData.section1Sec; }
+    } catch {}
 
     const render = await renderMediaOnLambda({
       region: REGION,
@@ -36,6 +42,7 @@ export async function POST(req: NextRequest) {
         whyBreakdown,
         category: post.category,
         postNumber: post.post_number || 1,
+        ...(audioUrl ? { audioUrl, section1Sec } : {}),
       },
       codec: 'h264',
       imageFormat: 'jpeg',

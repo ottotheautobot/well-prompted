@@ -1,5 +1,5 @@
 import {
-  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing,
+  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Audio,
 } from 'remotion';
 
 // 1080 × 1920  |  9:16 Reel  |  2 pages:
@@ -17,6 +17,8 @@ interface PromptVideoProps {
   whyBreakdown: WhyItem[];
   category: string;
   postNumber: number;
+  audioUrl?: string;
+  section1Sec?: number;  // when to transition to page 2 (audio-driven)
 }
 
 const BLUE  = '#0085FF';
@@ -78,6 +80,17 @@ function pageAlpha(frame: number, start: number, end: number, fadeDur: number) {
 
 // Called by calculateMetadata — same math as inside the component
 export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
+  // If audio drives the duration, use it
+  if (props.section1Sec) {
+    // page 1 = section1 audio + small buffer, page 2 = remaining audio + 2s hold
+    const itemCount   = props.whyBreakdown?.length || 4;
+    const ITEM_DELAY  = Math.round(fps * 0.45);
+    const whyAnimDur  = Math.round(fps * 0.3) + itemCount * ITEM_DELAY;
+    const p2Duration  = whyAnimDur + Math.round(fps * 10);
+    const p1End       = Math.round(props.section1Sec * fps) + Math.round(fps * 0.5);
+    return p1End + p2Duration + Math.round(fps * 0.5);
+  }
+  // Fallback: type-speed based
   const FADE            = Math.round(fps * 0.45);
   const WELL_TYPE_START = Math.round(fps * 1.2);
   const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
@@ -86,12 +99,12 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
   const itemCount       = props.whyBreakdown?.length || 4;
   const ITEM_DELAY      = Math.round(fps * 0.45);
   const whyAnimDur      = Math.round(fps * 0.3) + itemCount * ITEM_DELAY + Math.round(fps * 0.3);
-  const P2_DURATION     = whyAnimDur + Math.round(fps * 10); // anim + 10s hold
+  const P2_DURATION     = whyAnimDur + Math.round(fps * 10);
   return P1_END + FADE + P2_DURATION + FADE;
 }
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
-  okayPrompt, wellPrompt, whyBreakdown, category,
+  okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, section1Sec,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -103,8 +116,10 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
   const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
 
-  // Page 1 ends after typing finishes + 2.5s hold to read
-  const P1_END   = WELL_TYPE_END + Math.round(fps * 2.5);
+  // Page 1 ends: audio-driven if available, otherwise type-speed + hold
+  const P1_END = section1Sec
+    ? Math.round(section1Sec * fps) + Math.round(fps * 0.5)
+    : WELL_TYPE_END + Math.round(fps * 2.5);
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;
 
@@ -139,6 +154,9 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: BG, overflow: 'hidden' }}>
+
+      {/* Narration audio */}
+      {audioUrl && <Audio src={audioUrl} volume={1} />}
 
       {/* Accent bars */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8,

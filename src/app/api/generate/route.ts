@@ -1,12 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+
+const ELEVENLABS_KEY    = process.env.ELEVENLABS_API_KEY!;
+const ELEVENLABS_VOICE  = process.env.ELEVENLABS_VOICE_ID || '4tRn1lSkEn13EVTuqb0g';
+const S3_BUCKET         = process.env.REMOTION_S3_BUCKET || 'remotionlambda-useast2-v6np42nzpq';
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || 'us-east-2',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+
+// Estimate seconds from word count (150 wpm natural TTS pace)
+function estimateSec(text: string): number {
+  return (text.trim().split(/\s+/).length / 150) * 60;
+}
+
+async function generateAudio(postId: string, script: string): Promise<{ url: string; durationSec: number }> {
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE}`, {
+    method: 'POST',
+    headers: { 'xi-api-key': ELEVENLABS_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: script,
+      model_id: 'eleven_turbo_v2_5',
+      voice_settings: { stability: 0.45, similarity_boost: 0.82, style: 0.15, use_speaker_boost: true },
+    }),
+  });
+  if (!res.ok) throw new Error(`ElevenLabs error: ${res.status} ${await res.text()}`);
+  const buf = Buffer.from(await res.arrayBuffer());
+
+  const key = `audio/${postId}.mp3`;
+  await s3.send(new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: key,
+    Body: buf,
+    ContentType: 'audio/mpeg',
+    // Public-read so Remotion Lambda can fetch it
+    ACL: 'public-read' as const,
+  }));
+
+  const url = `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/${key}`;
+  const durationSec = estimateSec(script);
+  return { url, durationSec };
+}
 
 async function callClaude(prompt: string, maxTokens = 800): Promise<string> {
   const msg = await client.messages.create({
@@ -261,7 +307,49 @@ Return JSON only:
 
     const whyBreakdown = JSON.parse(whyRaw.slice(whyRaw.indexOf('['), whyRaw.lastIndexOf(']') + 1));
 
-    // === STAGE 3: Generate caption ===
+    // === STAGE 3: Generate narration script ===
+    const narrationRaw = await callClaude(
+      `Write a voiceover narration script for a 30-second Instagram Reel about prompt engineering.
+
+SCENARIO: ${item.situation}
+OKAY PROMPT: "${item.okay_prompt}"
+WELL PROMPTED: "${wellPromptRaw}"
+WHY BREAKDOWN: ${whyBreakdown.map((w: {title:string;description:string}, i: number) => `${i+1}. ${w.title} — ${w.description}`).join('\n')}
+
+The video has two pages:
+- Page 1: Okay prompt shown, then well prompted version types in (~10-12 seconds)
+- Page 2: "Why this works" breakdown appears item by item (~15-18 seconds)
+
+Write TWO sections of narration:
+
+SECTION 1 (35-45 words, plays over page 1):
+- One sentence calling out what's wrong with the okay prompt. Make it sting slightly.
+- "Here's the upgrade." as a natural pivot.
+- 1-2 sentences explaining what the well prompted version does differently — what it adds and why that matters. Don't read it verbatim.
+
+SECTION 2 (50-65 words, plays over page 2):
+- Natural bridge into the why — something like "Here's why it works." or "Let's break it down."
+- One sentence per breakdown item, in order. Conversational, punchy. Talk like a smart person explaining to a friend, not a professor.
+
+Rules:
+- No filler. No "in this video". No "make sure to follow". No exclamation energy.
+- Warm but direct. Like a smart colleague walking you through something useful.
+- Natural speech rhythm — use sentence fragments where they sound right.
+
+Return JSON only:
+{"section1": "...", "section2": "..."}`, 600);
+
+    let narration = { section1: '', section2: '' };
+    try {
+      const s = narrationRaw.indexOf('{'), e = narrationRaw.lastIndexOf('}');
+      narration = JSON.parse(narrationRaw.slice(s, e + 1));
+    } catch { /* narration optional, don't fail the whole post */ }
+
+    const fullScript = [narration.section1, narration.section2].filter(Boolean).join(' ');
+    const section1Sec = estimateSec(narration.section1);
+    const totalSec    = estimateSec(fullScript);
+
+    // === STAGE 4: Generate caption ===
     const captionRaw = await callClaude(
       `Write an Instagram caption for a prompt engineering before/after post.
 
@@ -289,7 +377,7 @@ Rules:
 
 Return ONLY the caption text, nothing else.`, 600);
 
-    // === STAGE 4: Save to DB ===
+    // === STAGE 5: Save to DB ===
     const { data: post, error } = await supabase.from('posts').insert({
       status: 'pending_review',
       format: 'before_after',
@@ -297,14 +385,28 @@ Return ONLY the caption text, nothing else.`, 600);
       techniques: [item.technique],
       bad_prompt: item.okay_prompt,
       good_prompt: wellPromptRaw,
-      good_output: JSON.stringify(whyBreakdown), // why breakdown stored here
+      good_output: JSON.stringify(whyBreakdown),
       bad_output: '',
       caption_bad: captionRaw,
-      caption_good: '',
+      caption_good: '', // will be updated with audio data below
       render_status: 'pending',
     }).select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // === STAGE 6: Generate audio (non-blocking on failure) ===
+    let audioData: { url: string; section1Sec: number; totalSec: number } | null = null;
+    if (fullScript && ELEVENLABS_KEY) {
+      try {
+        const { url } = await generateAudio(post.id, fullScript);
+        audioData = { url, section1Sec, totalSec };
+        await supabase.from('posts').update({
+          caption_good: JSON.stringify(audioData),
+        }).eq('id', post.id);
+      } catch (e: any) {
+        console.error('Audio generation failed (non-fatal):', e.message);
+      }
+    }
 
     // Telegram notification
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
@@ -317,7 +419,7 @@ Return ONLY the caption text, nothing else.`, 600);
       });
     }
 
-    return NextResponse.json({ ...post, okay_prompt: item.okay_prompt, well_prompt: wellPromptRaw, why_breakdown: whyBreakdown });
+    return NextResponse.json({ ...post, okay_prompt: item.okay_prompt, well_prompt: wellPromptRaw, why_breakdown: whyBreakdown, audio: audioData });
 
   } catch (err: any) {
     console.error('Generate error:', err);

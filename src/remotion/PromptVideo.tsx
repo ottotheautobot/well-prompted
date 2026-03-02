@@ -1,5 +1,5 @@
 import {
-  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig,
+  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing,
 } from 'remotion';
 
 // 1080 × 1920  |  9:16 Reel  |  2 pages:
@@ -83,7 +83,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const { fps, durationInFrames } = useVideoConfig();
 
   const FADE   = Math.round(fps * 0.45);
-  const P1_END = Math.round(fps * 11);   // 330 frames — read both prompts
+  const P1_END = Math.round(fps * 12);   // 360 frames — enough to read both
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;
 
@@ -91,6 +91,19 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const op2 = pageAlpha(frame, P2_START, P2_END, FADE);
 
   const globalIn = spring({ frame, fps, from: 0, to: 1, config: { damping: 22 } });
+
+  // Typing animation for well prompted
+  const WELL_TYPE_START = Math.round(fps * 1.2);
+  const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
+  const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
+  const typeProgress    = interpolate(
+    frame,
+    [WELL_TYPE_START, WELL_TYPE_END],
+    [0, 1],
+    { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.ease) },
+  );
+  const visibleChars = Math.floor(typeProgress * wellPrompt.length);
+  const cursorOn     = Math.sin(frame * 0.28) > 0;
 
   // Layout computed once
   const { fontSize, hOkay, hWell } = computeLayout(okayPrompt, wellPrompt);
@@ -198,7 +211,10 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
             fontFamily: 'monospace',
             wordBreak: 'break-word',
           }}>
-            {wellPrompt}
+            {wellPrompt.slice(0, visibleChars)}
+            {visibleChars < wellPrompt.length && (
+              <span style={{ color: BLUE, opacity: cursorOn ? 1 : 0 }}>▋</span>
+            )}
           </span>
         </div>
       </div>
@@ -243,14 +259,14 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
                 border: `1px solid #1A2540`,
                 borderLeft: `4px solid ${BLUE}50`,
                 borderRadius: 18,
-                padding: '32px 36px',
+                padding: '36px 40px',
               }}>
                 {/* Number */}
                 <div style={{
-                  width: 56, height: 56, borderRadius: 14,
+                  width: 66, height: 66, borderRadius: 16,
                   background: `${BLUE}15`, border: `1px solid ${BLUE}35`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: BLUE, fontSize: 26, fontWeight: 800, fontFamily: 'sans-serif',
+                  color: BLUE, fontSize: 32, fontWeight: 800, fontFamily: 'sans-serif',
                   flexShrink: 0,
                 }}>
                   {i + 1}
@@ -258,13 +274,13 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
                 {/* Text */}
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    color: '#E2E8F0', fontSize: 38, fontWeight: 700,
-                    fontFamily: 'sans-serif', lineHeight: 1.25, marginBottom: 10,
+                    color: '#E2E8F0', fontSize: 46, fontWeight: 700,
+                    fontFamily: 'sans-serif', lineHeight: 1.2, marginBottom: 12,
                   }}>
                     {item.title}
                   </div>
                   <div style={{
-                    color: '#5A7090', fontSize: 30, fontFamily: 'sans-serif',
+                    color: '#5A7090', fontSize: 40, fontFamily: 'sans-serif',
                     lineHeight: 1.5,
                   }}>
                     {item.description}

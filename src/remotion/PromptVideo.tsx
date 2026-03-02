@@ -110,15 +110,10 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
   const FADE       = Math.round(fps * 0.45);
   const HOLD_END   = Math.round(fps * 3); // 3s hold at very end after why page
 
-  let p1End: number;
-  if (props.section1Sec) {
-    // Audio-driven: section1 finishes + 5s reading hold
-    p1End = Math.round(props.section1Sec * fps) + Math.round(fps * 5);
-  } else {
-    const WELL_TYPE_START = Math.round(fps * 1.2);
-    const typeDuration    = Math.round(fps * Math.max(5, props.wellPrompt.length / 26));
-    p1End = WELL_TYPE_START + typeDuration + Math.round(fps * 5);
-  }
+  // Always typing-based — 5s after well prompt finishes
+  const WELL_TYPE_START = Math.round(fps * 1.2);
+  const typeDuration    = Math.round(fps * Math.max(5, (props.wellPrompt || '').length / 26));
+  const p1End           = WELL_TYPE_START + typeDuration + Math.round(fps * 5);
 
   const computed = p1End + FADE + whyAnimDur + HOLD_END + FADE;
 
@@ -144,10 +139,9 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const typeDuration    = Math.round(fps * Math.max(5, wellPrompt.length / 26));
   const WELL_TYPE_END   = WELL_TYPE_START + typeDuration;
 
-  // Page 1 ends: narration section 1 finish + 5s reading hold
-  const P1_END = section1Sec
-    ? Math.round(section1Sec * fps) + Math.round(fps * 5)
-    : WELL_TYPE_END + Math.round(fps * 5);
+  // P1_END is always typing-based — 5s hold after the well prompt finishes typing
+  // Never driven by narration timing (which causes the gap to vary unpredictably)
+  const P1_END = WELL_TYPE_END + Math.round(fps * 5);
   const P2_START = P1_END;
   const P2_END   = durationInFrames - FADE;
 

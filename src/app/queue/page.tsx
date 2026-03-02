@@ -360,43 +360,57 @@ export default function QueuePage() {
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
                       </div>
                     ) : (
-                      /* Before/after — new single-video format */
-                      <div className="space-y-5">
-                        {/* Okay prompt */}
+                      /* Before/after — 3-page video format */
+                      <div className="space-y-6">
+                        {/* Page 1 — Okay Prompt */}
                         <div>
-                          <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#FF2D78]" />Okay Prompt
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-1 h-5 rounded-full bg-[#FF2D78]" />
+                            <span className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest">Page 1 — Okay Prompt</span>
                           </div>
-                          <div className="bg-[#080B14] border border-[#FF2D7830] border-l-4 border-l-[#FF2D78] rounded-lg p-4 font-mono text-sm text-gray-300">{post.bad_prompt}</div>
+                          <div className="bg-[#0B1220] border border-[#FF2D7828] border-l-4 border-l-[#FF2D78] rounded-xl p-5 font-mono text-sm text-[#A8B8CC] leading-relaxed">{post.bad_prompt}</div>
                         </div>
-                        {/* Well prompted */}
+
+                        {/* Page 2 — Well Prompted */}
                         <div>
-                          <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#0085FF]" />Well Prompted
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-1 h-5 rounded-full bg-[#0085FF]" />
+                            <span className="text-xs text-[#0085FF] font-bold uppercase tracking-widest">Page 2 — Well Prompted</span>
                           </div>
-                          <div className="bg-[#0A1525] border border-[#0085FF45] border-l-4 border-l-[#0085FF] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
+                          <div className="bg-[#091525] border border-[#0085FF40] border-l-4 border-l-[#0085FF] rounded-xl p-5 font-mono text-sm text-[#C8D8F0] leading-relaxed">{post.good_prompt}</div>
                         </div>
-                        {/* Why breakdown */}
-                        {(() => { try { return JSON.parse(post.good_output); } catch { return null; } })() && (
-                          <div>
-                            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3">Why This Works</div>
-                            <div className="space-y-2">
-                              {(JSON.parse(post.good_output) as {title:string;description:string}[]).map((item, i) => (
-                                <div key={i} className="flex gap-3 bg-[#080B14] border border-[#1A2540] rounded-lg px-4 py-3">
-                                  <span className="text-[#0085FF] font-bold text-sm shrink-0">{i+1}.</span>
-                                  <div>
-                                    <div className="text-white text-sm font-semibold">{item.title}</div>
-                                    <div className="text-gray-500 text-xs mt-0.5">{item.description}</div>
+
+                        {/* Page 3 — Why This Works */}
+                        {(() => { try { return JSON.parse(post.good_output); } catch { return null; } })() && (() => {
+                          const items = JSON.parse(post.good_output) as {title:string;description:string}[];
+                          return (
+                            <div>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-1 h-5 rounded-full bg-[#0085FF]" />
+                                <span className="text-xs text-[#2C3D5C] font-bold uppercase tracking-widest">Page 3 — Why This Works</span>
+                                <div className="flex-1 h-px bg-[#1A2540]" />
+                              </div>
+                              <div className="space-y-3">
+                                {items.map((item, i) => (
+                                  <div key={i} className="flex gap-4 bg-[#0B1220] border border-[#1A2540] rounded-xl px-5 py-4">
+                                    <div className="w-9 h-9 rounded-lg bg-[#0085FF18] border border-[#0085FF30] flex items-center justify-center text-[#0085FF] font-bold text-sm shrink-0 mt-0.5">
+                                      {i + 1}
+                                    </div>
+                                    <div>
+                                      <div className="text-white text-sm font-semibold leading-snug">{item.title}</div>
+                                      <div className="text-[#5A6880] text-xs mt-1 leading-relaxed">{item.description}</div>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
+
                         {/* Caption */}
                         <div>
                           <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Caption</div>
-                          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-line bg-[#080B14] border border-[#1A2540] rounded-lg p-4">{post.caption_bad}</div>
+                          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-line bg-[#080B14] border border-[#1A2540] rounded-xl p-5">{post.caption_bad}</div>
                         </div>
                       </div>
                     )}

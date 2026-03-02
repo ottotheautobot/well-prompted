@@ -7,6 +7,10 @@ export function middleware(req: NextRequest) {
 
   // Only protect the portal pages and mutation APIs
   const isPortalPage = pathname.startsWith('/queue') || pathname.startsWith('/schedule');
+  // GET /api/publish is the cron trigger — exempt from auth
+  const isCronEndpoint = pathname === '/api/publish' && req.method === 'GET';
+  if (isCronEndpoint) return NextResponse.next();
+
   const isMutationAPI = pathname.startsWith('/api/approve') ||
     pathname.startsWith('/api/video-approve') ||
     pathname.startsWith('/api/render') ||

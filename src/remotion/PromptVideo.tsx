@@ -105,7 +105,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const label       = variant === 'bad' ? '↓  OKAY PROMPT' : '✓  WELL PROMPTED';
   const cardBg      = variant === 'bad' ? '#0C1220' : '#0A1525';
   const cardBorder  = variant === 'bad' ? `${PINK}35` : `${BLUE}50`;
-  const outputColor = variant === 'bad' ? '#7A8FA8' : '#E2E8F0';
+  const outputColor  = variant === 'bad' ? '#7A8FA8' : '#E2E8F0';
+  const outputAccent = '#4A6080'; // neutral slate — same for both variants
 
   // Card dimensions (px) — used for font size calculation
   const CARD_W = 1080 - 104; // full width minus left+right margins
@@ -212,12 +213,12 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         opacity: outOpacity,
       }}>
         <span style={{
-          color: accent, fontSize: 20, fontWeight: 800,
+          color: outputAccent, fontSize: 20, fontWeight: 800,
           letterSpacing: 3, fontFamily: 'sans-serif',
         }}>
           AI OUTPUT
         </span>
-        <div style={{ flex: 1, height: 1.5, background: `${accent}30` }} />
+        <div style={{ flex: 1, height: 1.5, background: `${outputAccent}40` }} />
         {streamDone && (
           <span style={{ color: accent, fontSize: 16, fontFamily: 'sans-serif', opacity: 0.7 }}>
             #{postNumber}
@@ -230,8 +231,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         <div style={{
           position: 'absolute', top: 720, left: 52, right: 52, height: OUTPUT_H,
           background: cardBg,
-          border: `1px solid ${cardBorder}`,
-          borderLeft: `5px solid ${accent}`,
+          border: `1px solid ${outputAccent}30`,
+          borderLeft: `5px solid ${outputAccent}`,
           borderRadius: 14,
           padding: '36px 44px',
           display: 'flex', alignItems: 'center',
@@ -244,7 +245,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
             color={outputColor}
             visibleChars={visibleChars}
             cursorVisible={cursorVisible}
-            accentColor={accent}
+            accentColor={outputAccent}
           />
         </div>
       )}

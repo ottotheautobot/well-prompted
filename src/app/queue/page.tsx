@@ -50,8 +50,11 @@ export default function QueuePage() {
       const stuck = await res.json();
       for (const post of stuck) {
         const ids = (post as any).render_ids;
-        if (ids?.bad_render_id && ids?.good_render_id) {
-          pollRenderStatus(post.id, ids.bad_render_id, ids.good_render_id, ids.bucket);
+        if (ids?.render_id) {
+          pollRenderStatus(post.id, ids.render_id, ids.bucket);
+        } else if (ids?.bad_render_id) {
+          // legacy two-video format
+          pollRenderStatus(post.id, ids.bad_render_id, ids.bucket);
         }
       }
     };
@@ -151,18 +154,18 @@ export default function QueuePage() {
     setActionLoading(null);
   };
 
-  const pollRenderStatus = async (id: string, bad_render_id: string, good_render_id: string, bucket: string) => {
+  const pollRenderStatus = async (id: string, render_id: string, bucket: string, bad_render_id?: string, good_render_id?: string) => {
     const pollRes = await fetch('/api/render-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, bad_render_id, good_render_id, bucket }),
+      body: JSON.stringify({ id, render_id: render_id || bad_render_id, bucket }),
     });
     const pollData = await pollRes.json();
     if (pollData.done) {
       setFilter('pending_video_review');
       await fetchPosts('pending_video_review');
     } else if (!pollData.error) {
-      setTimeout(() => pollRenderStatus(id, bad_render_id, good_render_id, bucket), 10000);
+      setTimeout(() => pollRenderStatus(id, render_id, bucket), 10000);
     }
   };
 
@@ -183,9 +186,8 @@ export default function QueuePage() {
       alert('Render failed: ' + (data.error || 'Unknown'));
       setPosts(posts.map(p => p.id === id ? { ...p, render_status: 'failed', status: 'approved' as PostStatus } : p));
     } else {
-      // Start polling — renders take 2-4 min on Lambda
-      const { bad_render_id, good_render_id, bucket } = data;
-      setTimeout(() => pollRenderStatus(id, bad_render_id, good_render_id, bucket), 15000);
+      const { render_id, bucket } = data;
+      setTimeout(() => pollRenderStatus(id, render_id, bucket), 15000);
     }
   };
 
@@ -358,74 +360,58 @@ export default function QueuePage() {
                         <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
                       </div>
                     ) : (
-                      /* Before/after display */
-                      <div className="grid grid-cols-2 gap-6">
-                      {/* BAD */}
-                      <div className="space-y-3">
-                        <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#FF2D78]" />Bad Prompt
+                      /* Before/after — new single-video format */
+                      <div className="space-y-5">
+                        {/* Okay prompt */}
+                        <div>
+                          <div className="text-xs text-[#FF2D78] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#FF2D78]" />Okay Prompt
+                          </div>
+                          <div className="bg-[#080B14] border border-[#FF2D7830] border-l-4 border-l-[#FF2D78] rounded-lg p-4 font-mono text-sm text-gray-300">{post.bad_prompt}</div>
                         </div>
-                        <div className="bg-[#080B14] border border-[#FF2D7830] rounded-lg p-4 font-mono text-sm text-gray-300">{post.bad_prompt}</div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
-                        <div className="bg-[#080B14] border border-[#FF2D7820] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
-                          {(post as any).bad_output_snippet || post.bad_output.slice(0, 120) + '…'}
+                        {/* Well prompted */}
+                        <div>
+                          <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#0085FF]" />Well Prompted
+                          </div>
+                          <div className="bg-[#0A1525] border border-[#0085FF45] border-l-4 border-l-[#0085FF] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
                         </div>
-                        <details className="text-xs text-gray-600 cursor-pointer">
-                          <summary className="hover:text-gray-400">Full output</summary>
-                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">{post.bad_output}</div>
-                        </details>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
-                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_bad}</div>
-                      </div>
-                      {/* GOOD */}
-                      <div className="space-y-3">
-                        <div className="text-xs text-[#0085FF] font-bold uppercase tracking-widest flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[#0085FF]" />Well Prompted
+                        {/* Why breakdown */}
+                        {(() => { try { return JSON.parse(post.good_output); } catch { return null; } })() && (
+                          <div>
+                            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3">Why This Works</div>
+                            <div className="space-y-2">
+                              {(JSON.parse(post.good_output) as {title:string;description:string}[]).map((item, i) => (
+                                <div key={i} className="flex gap-3 bg-[#080B14] border border-[#1A2540] rounded-lg px-4 py-3">
+                                  <span className="text-[#0085FF] font-bold text-sm shrink-0">{i+1}.</span>
+                                  <div>
+                                    <div className="text-white text-sm font-semibold">{item.title}</div>
+                                    <div className="text-gray-500 text-xs mt-0.5">{item.description}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {/* Caption */}
+                        <div>
+                          <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Caption</div>
+                          <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-line bg-[#080B14] border border-[#1A2540] rounded-lg p-4">{post.caption_bad}</div>
                         </div>
-                        <div className="bg-[#080B14] border border-[#0085FF30] rounded-lg p-4 font-mono text-sm text-gray-300">{post.good_prompt}</div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Video Snippet</div>
-                        <div className="bg-[#080B14] border border-[#0085FF20] rounded-lg p-4 text-sm text-gray-400 italic leading-relaxed">
-                          {(post as any).good_output_snippet || post.good_output.slice(0, 120) + '…'}
-                        </div>
-                        <details className="text-xs text-gray-600 cursor-pointer">
-                          <summary className="hover:text-gray-400">Full output</summary>
-                          <div className="mt-2 bg-[#080B14] border border-[#1A2540] rounded-lg p-3 text-gray-500 max-h-36 overflow-y-auto leading-relaxed whitespace-pre-wrap">{post.good_output}</div>
-                        </details>
-                        <div className="text-xs text-gray-500 uppercase tracking-wider">Caption</div>
-                        <div className="text-sm text-gray-300 italic leading-relaxed whitespace-pre-line">{post.caption_good}</div>
-                      </div>
                       </div>
                     )}
                     </div>
 
-                    {/* Video preview (if available) */}
-                    {(post.video_bad_url || post.video_good_url) && (
+                    {/* Video preview (single video) */}
+                    {((post as any).video_url || post.video_bad_url) && (
                       <div className="mt-6 pt-4 border-t border-[#1A2540]">
-                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Videos</div>
-                        <div className="grid grid-cols-2 gap-4">
-                          {post.video_bad_url && (
-                            <div>
-                              <div className="text-xs text-[#FF2D78] mb-2">Bad Prompt Video</div>
-                              <video
-                                src={post.video_bad_url}
-                                controls
-                                className="w-full rounded-lg border border-[#FF2D7830]"
-                                style={{ maxHeight: 300 }}
-                              />
-                            </div>
-                          )}
-                          {post.video_good_url && (
-                            <div>
-                              <div className="text-xs text-[#0085FF] mb-2">Well Prompted Video</div>
-                              <video
-                                src={post.video_good_url}
-                                controls
-                                className="w-full rounded-lg border border-[#0085FF30]"
-                                style={{ maxHeight: 300 }}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wider mb-3">Video Preview</div>
+                        <video
+                          src={(post as any).video_url || post.video_bad_url}
+                          controls
+                          className="w-full max-w-sm rounded-lg border border-[#1A2540] mx-auto block"
+                          style={{ maxHeight: 500 }}
+                        />
                       </div>
                     )}
 

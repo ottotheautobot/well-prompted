@@ -6,354 +6,319 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
-// Curated topic × technique matrix from content research
-// Each entry: [topic, techniques[], badPromptHint, hookAngle]
-const CONTENT_MATRIX = [
-  // Professional Communication
-  {
-    category: 'professional_comms',
-    topic: 'Ask for a raise via email',
-    techniques: ['specificity', 'constraints', 'concrete evidence'],
-    bad_hint: 'A vague request for a meeting to discuss compensation',
-    good_hint: 'Include specific % ask, 2-3 concrete achievements, word limit',
-    hook: 'The AI invented a career you don\'t have',
-  },
-  {
-    category: 'professional_comms',
-    topic: 'Cold outreach email to a potential client',
-    techniques: ['role assignment', 'audience definition', 'personalization'],
-    bad_hint: 'Generic intro email with no context about who you\'re writing to',
-    good_hint: 'Define recipient\'s role, pain point, your specific value prop, max 3 sentences',
-    hook: 'This is why your cold emails get ignored',
-  },
-  {
-    category: 'professional_comms',
-    topic: 'Script for a difficult conversation with a coworker',
-    techniques: ['context loading', 'specificity', 'tone definition'],
-    bad_hint: 'Write a script for a hard conversation at work',
-    good_hint: 'Load context: what happened, relationship, desired outcome, what to avoid saying',
-    hook: 'Vague prompt = therapy speak that helps no one',
-  },
-  {
-    category: 'professional_comms',
-    topic: 'Self-assessment for a performance review',
-    techniques: ['output scaffolding', 'few-shot examples', 'specificity'],
-    bad_hint: 'Help me write my performance self-assessment',
-    good_hint: 'Give it your role, 3 wins with metrics, a growth area, and the exact format your company uses',
-    hook: 'You\'re leaving half your review on the table',
-  },
-  {
-    category: 'professional_comms',
-    topic: 'LinkedIn post about a recent career win',
-    techniques: ['negative constraints', 'role assignment', 'tone'],
-    bad_hint: 'Write a LinkedIn post about landing a big client',
-    good_hint: 'Assign a voice, ban corporate buzzwords, specify what the win actually was + why it matters',
-    hook: 'Stop letting AI write LinkedIn cringe for you',
-  },
-  // Content & Writing
-  {
-    category: 'writing',
-    topic: 'Blog post intro that actually hooks readers',
-    techniques: ['audience definition', 'constraints', 'hook formula'],
-    bad_hint: 'Write an intro for a blog post about remote work productivity',
-    good_hint: 'Define reader (who they are, what they struggle with), ban the "In today\'s world" opener, first line must be a provocative question or bold claim',
-    hook: 'Your AI blog intro is a sleeping pill',
-  },
-  {
-    category: 'writing',
-    topic: 'Email newsletter subject line with high open rates',
-    techniques: ['few-shot examples', 'A/B variants', 'specificity'],
-    bad_hint: 'Write a subject line for my newsletter about productivity',
-    good_hint: 'Show 2-3 examples of your existing subject lines, ask for 10 variants in different styles (curiosity, specificity, contrast), pick one to A/B test',
-    hook: 'Show it one example and it matches the style exactly',
-  },
-  {
-    category: 'writing',
-    topic: 'Instagram caption for a product launch',
-    techniques: ['format constraints', 'negative constraints', 'audience'],
-    bad_hint: 'Write an Instagram caption for my new product launch',
-    good_hint: 'Specify the product benefit (not the feature), target emotion, ban generic CTAs and excessive emojis, max 3 lines + one CTA',
-    hook: 'The AI thinks your audience is a children\'s birthday party',
-  },
-  {
-    category: 'writing',
-    topic: 'Rewrite a boring paragraph into something people actually read',
-    techniques: ['role assignment', 'tone specification', 'constraints'],
-    bad_hint: 'Make this paragraph more engaging',
-    good_hint: 'Assign a specific voice (e.g., "write like a sharp magazine editor"), specify what to preserve, ban passive voice and filler words',
-    hook: 'Same words, completely different energy',
-  },
-  {
-    category: 'writing',
-    topic: 'Brainstorm 10 content ideas for a niche topic',
-    techniques: ['context loading', 'specificity', 'format'],
-    bad_hint: 'Give me content ideas for my fitness Instagram',
-    good_hint: 'Load context: audience (age, pain points, what they\'ve seen too much of), specify format (Reels vs posts), ask for 10 with one-line rationale for each',
-    hook: 'Give it nothing, get a list you\'ve seen 100 times',
-  },
-  // Work Productivity
-  {
-    category: 'productivity',
-    topic: 'Summarize a long document with action items',
-    techniques: ['output scaffolding', 'format specification'],
-    bad_hint: 'Summarize this document',
-    good_hint: 'Specify: 3-bullet summary for someone who won\'t read it, then action items with owner + deadline format, flag anything that needs a decision',
-    hook: 'Summaries that don\'t bury the one thing that matters',
-  },
-  {
-    category: 'productivity',
-    topic: 'Decide between two strategic options',
-    techniques: ['chain of thought', 'role assignment', 'structured output'],
-    bad_hint: 'Help me decide between hiring a freelancer or an employee',
-    good_hint: 'Load your constraints (budget, timeline, skill gap), ask it to argue both sides first then give a recommendation with top 3 reasons',
-    hook: 'Make the AI argue against its own answer first',
-  },
-  {
-    category: 'productivity',
-    topic: 'Write a meeting agenda that actually works',
-    techniques: ['specificity', 'constraints', 'format'],
-    bad_hint: 'Create a meeting agenda for a project kickoff',
-    good_hint: 'Specify: who\'s attending (roles), goal of the meeting (decision vs update vs alignment), time budget per item, what must be resolved by the end',
-    hook: 'Your AI agenda is just a list of nouns',
-  },
-  {
-    category: 'productivity',
-    topic: 'Status update email to leadership',
-    techniques: ['role assignment', 'audience definition', 'format'],
-    bad_hint: 'Write a project status update',
-    good_hint: 'Define what leadership cares about (risks, blockers, timeline), lead with status (green/yellow/red), limit to what they need to action, not everything that happened',
-    hook: 'Leadership reads the first sentence and stops',
-  },
-  {
-    category: 'productivity',
-    topic: '30-60-90 day plan for a new role',
-    techniques: ['output scaffolding', 'specificity', 'context loading'],
-    bad_hint: 'Write a 30-60-90 day plan for a new marketing manager',
-    good_hint: 'Load the actual job description, specify company stage (startup vs enterprise), define what "success" looks like in 90 days, ask for 3 measurable goals per phase',
-    hook: 'Generic plan = generic first impression',
-  },
-  // Job Search
-  {
-    category: 'job_search',
-    topic: 'Tailor a resume bullet to a specific job description',
-    techniques: ['context loading', 'specificity', 'keyword alignment'],
-    bad_hint: 'Help me improve my resume bullet',
-    good_hint: 'Paste the job description, paste your bullet, ask it to rewrite using the exact language from the JD, lead with the measurable impact',
-    hook: 'Your resume says "responsible for things"',
-  },
-  {
-    category: 'job_search',
-    topic: 'Cover letter that doesn\'t sound like AI wrote it',
-    techniques: ['few-shot examples', 'negative constraints', 'voice'],
-    bad_hint: 'Write a cover letter for a product manager role at a tech startup',
-    good_hint: 'Give it your actual tone (paste 2-3 sentences you\'ve written), ban phrases like "I am writing to express my interest," lead with the thing that makes you different',
-    hook: 'Recruiters spot the AI cover letter in 3 seconds',
-  },
-  {
-    category: 'job_search',
-    topic: 'Prepare for a job interview',
-    techniques: ['role assignment', 'chain of thought', 'context loading'],
-    bad_hint: 'Help me prepare for a job interview',
-    good_hint: 'Have it play the interviewer — give it the job description and your resume, ask it to grill you with likely hard questions, then critique your answers',
-    hook: 'Have the AI interview you before the real thing',
-  },
-  {
-    category: 'job_search',
-    topic: 'Negotiate a job offer',
-    techniques: ['specificity', 'context loading', 'role assignment'],
-    bad_hint: 'Help me negotiate my job offer',
-    good_hint: 'Load: the offer details, your competing offers or market data, what you want and your walk-away point — ask for the exact words to say in the negotiation call',
-    hook: 'Don\'t negotiate without a script',
-  },
-  {
-    category: 'job_search',
-    topic: 'Follow-up after a job rejection',
-    techniques: ['tone specification', 'context loading', 'strategic framing'],
-    bad_hint: 'Write a follow-up email after being rejected for a job',
-    good_hint: 'Specify: keep door open for future roles, ask for one piece of feedback, no desperation — 4 sentences max, professional but warm tone',
-    hook: 'The follow-up most people never think to send',
-  },
-];
-
-async function callClaude(prompt: string, system?: string, maxTokens = 600): Promise<string> {
+async function callClaude(prompt: string, maxTokens = 800): Promise<string> {
   const msg = await client.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: maxTokens,
-    ...(system ? { system } : {}),
+    model: 'claude-haiku-4-5', max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }],
   });
   return msg.content[0].type === 'text' ? msg.content[0].text.trim() : '';
 }
 
-export async function POST(req: NextRequest) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
-  }
+function parseJSON(raw: string) {
+  const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+  return JSON.parse(raw.slice(s, e + 1));
+}
 
+// ── CONTENT MATRIX ──
+// Each entry: id, category, situation, emotional_hook, technique, okay_prompt
+// "okay_prompt" is how a real person types it at 11pm — no formatting, no context, vague
+
+const CONTENT_MATRIX = [
+  // ── CAREER ──
+  {
+    id: 'C1', category: 'career',
+    situation: 'Got passed over for a promotion and needs to ask why without burning the relationship',
+    emotional_hook: 'Injustice, anxiety about damaging the relationship',
+    technique: 'Tone calibration + goal framing',
+    okay_prompt: "Write me an email to my boss asking why I didn't get the promotion.",
+    tags: ['#careertips', '#workadvice', '#promotion', '#careeradvice'],
+  },
+  {
+    id: 'C2', category: 'career',
+    situation: 'Asking for a raise when you have performance data but don\'t know how to frame it',
+    emotional_hook: 'Fear of rejection, not knowing how to present without seeming greedy',
+    technique: 'Business case framing + constraint + specificity',
+    okay_prompt: "Write me an email asking my boss for a raise. I've been here 2 years and I work really hard.",
+    tags: ['#careertips', '#salary', '#raise', '#workadvice'],
+  },
+  {
+    id: 'C3', category: 'career',
+    situation: 'Performance review self-assessment due and starting from scratch',
+    emotional_hook: 'Dread, procrastination, not knowing how to make wins sound impressive',
+    technique: 'Structure + role + outcome framing',
+    okay_prompt: "Help me write my performance review self-assessment. I don't know where to start.",
+    tags: ['#performancereview', '#careertips', '#workadvice', '#selfassessment'],
+  },
+  {
+    id: 'C4', category: 'career',
+    situation: 'Need to tell your boss you\'re overwhelmed without looking incompetent',
+    emotional_hook: 'Fear of being seen as weak or unable to handle the job',
+    technique: 'Audience awareness + tone + proposed solution framing',
+    okay_prompt: "Write an email telling my boss I have too much work and I'm overwhelmed.",
+    tags: ['#worklifebalance', '#careertips', '#workadvice', '#burnout'],
+  },
+  {
+    id: 'C5', category: 'career',
+    situation: 'Received a job offer and needs to negotiate salary without killing the offer',
+    emotional_hook: 'Scarcity fear — afraid asking will cause them to rescind',
+    technique: 'Persona + leverage framing + constraint',
+    okay_prompt: "Write a response to a job offer where I want to negotiate the salary.",
+    tags: ['#salarynegotiation', '#jobsearch', '#careertips', '#joboffer'],
+  },
+  // ── JOB SEARCH ──
+  {
+    id: 'J1', category: 'job_search',
+    situation: 'Applying for a role they\'re slightly underqualified for and need to address the gap',
+    emotional_hook: 'Impostor syndrome, fear of being rejected on paper',
+    technique: 'Reframe + context + positioning',
+    okay_prompt: "Write me a cover letter for a product manager job. I don't have all the requirements.",
+    tags: ['#coverletter', '#jobsearch', '#jobhunting', '#careertips'],
+  },
+  {
+    id: 'J2', category: 'job_search',
+    situation: 'Cold messaging someone at a target company — a complete stranger — for a job',
+    emotional_hook: 'Fear of rejection, not knowing what to say to a stranger',
+    technique: 'Hook + specificity + clear ask + length constraint',
+    okay_prompt: "Write a LinkedIn message to someone at a company I want to work at asking about job opportunities.",
+    tags: ['#linkedin', '#jobsearch', '#networking', '#jobhunting'],
+  },
+  {
+    id: 'J3', category: 'job_search',
+    situation: 'Following up after a job interview without seeming desperate',
+    emotional_hook: 'Desperation vs. professionalism tension',
+    technique: 'Tone constraint + brevity + value add',
+    okay_prompt: "Write a follow up email after my job interview. I want to remind them I'm interested.",
+    tags: ['#jobsearch', '#interview', '#jobhunting', '#careertips'],
+  },
+  {
+    id: 'J4', category: 'job_search',
+    situation: 'Writing a LinkedIn post to position themselves as an expert without sounding cringe',
+    emotional_hook: 'Embarrassment about self-promotion',
+    technique: 'Voice + specificity + format + anti-cringe constraint',
+    okay_prompt: "Write me a LinkedIn post about my experience in sales that makes me look like an expert.",
+    tags: ['#linkedin', '#personalbrand', '#thoughtleadership', '#careertips'],
+  },
+  {
+    id: 'J5', category: 'job_search',
+    situation: 'Got rejected from a job and wants to ask for feedback in a way that gets a real response',
+    emotional_hook: 'Defeat, not wanting to seem bitter',
+    technique: 'Framing + brevity + genuine curiosity tone',
+    okay_prompt: "Write an email asking for feedback after I got rejected from a job application.",
+    tags: ['#jobsearch', '#jobhunting', '#rejection', '#careertips'],
+  },
+  // ── COMMUNICATION ──
+  {
+    id: 'K1', category: 'communication',
+    situation: 'Need to push back on a manager\'s decision without being seen as difficult',
+    emotional_hook: 'Power dynamic fear, career risk',
+    technique: 'Framing + evidence + collaborative tone',
+    okay_prompt: "Write an email disagreeing with my manager's decision about our project timeline.",
+    tags: ['#workadvice', '#communication', '#leadership', '#careertips'],
+  },
+  {
+    id: 'K2', category: 'communication',
+    situation: 'Messed up a client deliverable and needs to send an apology that keeps the relationship',
+    emotional_hook: 'Shame, urgency, fear of losing the client',
+    technique: 'Specificity + accountability + next steps',
+    okay_prompt: "Write an apology email to a client because I missed a deadline on their project.",
+    tags: ['#clientmanagement', '#communication', '#businessadvice', '#workadvice'],
+  },
+  {
+    id: 'K3', category: 'communication',
+    situation: 'A colleague\'s work keeps missing the mark and you need to say something',
+    emotional_hook: 'Conflict avoidance, fear of damaging the relationship',
+    technique: 'Specific behavior + impact + curious tone',
+    okay_prompt: "Write a message to a coworker telling them their work quality has been bad lately.",
+    tags: ['#workadvice', '#communication', '#management', '#leadership'],
+  },
+  {
+    id: 'K4', category: 'communication',
+    situation: 'Need to say no to a request from someone senior without damaging the relationship',
+    emotional_hook: 'People-pleasing, fear of seeming unhelpful',
+    technique: 'Constraint + alternative offer + tone',
+    okay_prompt: "Write an email saying no to a request from my director because I'm too busy.",
+    tags: ['#workadvice', '#boundaries', '#communication', '#careertips'],
+  },
+  {
+    id: 'K5', category: 'communication',
+    situation: 'An unreasonable client is pushing beyond scope and you need to set a boundary',
+    emotional_hook: 'Resentment, fear of losing the client if you push back',
+    technique: 'Role + situation + firm-but-professional tone',
+    okay_prompt: "Write a message to a client who keeps asking for more than what we agreed on.",
+    tags: ['#clientmanagement', '#freelance', '#boundaries', '#businessadvice'],
+  },
+  // ── WRITING ──
+  {
+    id: 'W1', category: 'writing',
+    situation: 'Writing a blog post intro that makes people actually keep reading',
+    emotional_hook: 'Content anxiety — putting in effort nobody reads',
+    technique: 'Hook framework + structure + audience',
+    okay_prompt: "Write an intro for my blog post about remote work productivity tips.",
+    tags: ['#contentwriting', '#blogging', '#writing', '#contentcreator'],
+  },
+  {
+    id: 'W2', category: 'writing',
+    situation: 'Need to repurpose one long article into multiple LinkedIn posts',
+    emotional_hook: 'Time pressure, content output anxiety',
+    technique: 'Task scoping + format + angle variation',
+    okay_prompt: "Turn this blog post into LinkedIn posts for me.",
+    tags: ['#contentrepurposing', '#linkedin', '#contentcreation', '#contentcreator'],
+  },
+  {
+    id: 'W3', category: 'writing',
+    situation: 'Email newsletter subject lines that people actually open',
+    emotional_hook: 'Low open rates, feeling ignored',
+    technique: 'Audience definition + curiosity gap + constraint',
+    okay_prompt: "Write subject lines for my email newsletter about marketing tips.",
+    tags: ['#emailmarketing', '#newsletter', '#copywriting', '#marketingtips'],
+  },
+  // ── THINKING ──
+  {
+    id: 'T1', category: 'thinking',
+    situation: 'Stuck in decision paralysis on a major choice — going in circles',
+    emotional_hook: 'Anxiety, exhaustion from overthinking',
+    technique: 'Structured decision framework prompt',
+    okay_prompt: "Help me decide whether I should quit my job and go freelance.",
+    tags: ['#decisionmaking', '#productivity', '#mindset', '#aitools'],
+  },
+  {
+    id: 'T3', category: 'thinking',
+    situation: 'Have a business idea and want to pressure-test it before spending money',
+    emotional_hook: 'Excitement mixed with fear of wasting money',
+    technique: 'Devil\'s advocate + structured critique prompt',
+    okay_prompt: "Tell me if my business idea is good. I want to start a meal prep delivery service.",
+    tags: ['#entrepreneur', '#startup', '#businessadvice', '#aitools'],
+  },
+];
+
+// Hashtag base set (always included)
+const BASE_TAGS = '#promptengineering #chatgpt #aitools #productivity #prompttips #artificialintelligence #chatgptprompts #aiwriting #promptcraft';
+
+export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
-  // Pick a content item: by index, by category, or random from matrix
-  let contentItem = null;
-  if (body.matrix_index !== undefined) {
-    contentItem = CONTENT_MATRIX[body.matrix_index];
+  // Pick content item
+  let item;
+  if (body.matrix_id) {
+    item = CONTENT_MATRIX.find(c => c.id === body.matrix_id);
+  } else if (body.matrix_index !== undefined) {
+    item = CONTENT_MATRIX[body.matrix_index % CONTENT_MATRIX.length];
   } else if (body.category) {
     const filtered = CONTENT_MATRIX.filter(c => c.category === body.category);
-    contentItem = filtered[Math.floor(Math.random() * filtered.length)];
+    item = filtered[Math.floor(Math.random() * filtered.length)];
   } else {
-    contentItem = CONTENT_MATRIX[Math.floor(Math.random() * CONTENT_MATRIX.length)];
+    item = CONTENT_MATRIX[Math.floor(Math.random() * CONTENT_MATRIX.length)];
   }
 
-  const category = contentItem?.category || 'writing';
+  if (!item) return NextResponse.json({ error: 'No matching content item' }, { status: 400 });
 
   try {
-    // === STAGE 1: Generate concrete bad + good prompts from the matrix hint ===
-    const conceptRaw = await callClaude(
-      `You are the content strategist for @well.prompted, an Instagram page teaching prompt engineering through before/after comparisons.
+    // === STAGE 1: Generate well-prompted version ===
+    const wellPromptRaw = await callClaude(
+      `You are a prompt engineering expert creating educational content for @well.prompted on Instagram.
 
-Generate a before/after prompt pair for this topic:
-TOPIC: ${contentItem?.topic}
-CATEGORY: ${category}
+SCENARIO: ${item.situation}
+EMOTIONAL HOOK: ${item.emotional_hook}
+TECHNIQUE TO DEMONSTRATE: ${item.technique}
 
-BAD PROMPT DIRECTION: ${contentItem?.bad_hint}
-GOOD PROMPT DIRECTION: ${contentItem?.good_hint}
-TECHNIQUES TO DEMONSTRATE: ${contentItem?.techniques?.join(', ')}
+OKAY PROMPT (how a real person types it at 11pm, half-asleep):
+"${item.okay_prompt}"
 
-RULES for BAD prompt:
-- Must be exactly what a smart but inexperienced person would actually type
-- Not obviously wrong — just incomplete or vague
-- 1-2 sentences max
+Write the "well prompted" version. Rules:
+- Add ONLY 3-5 targeted improvements — not a laundry list
+- Each addition must have an obvious reason it matters
+- Must feel achievable by a non-technical person
+- Use realistic placeholder values like [Manager's name], [15%], [specific achievement]
+- First person voice, same task — just much more specific
+- Do NOT use markdown, headers, or bullet points in the prompt itself — it's a prompt, not a document
 
-RULES for GOOD prompt:
-- 2-4 targeted additions/changes only (role, constraint, format, context)
-- Must feel achievable — someone could write this in 60 seconds
-- NOT a wall of text — no paragraph-length prompt engineering dissertations
-- Should produce dramatically different output when actually run
+Return ONLY the prompt text, nothing else.`, 400);
 
-Return JSON only, no markdown:
-{
-  "topic": "${contentItem?.topic}",
-  "bad_prompt": "the realistic bad prompt",
-  "good_prompt": "the improved prompt",
-  "techniques": ${JSON.stringify(contentItem?.techniques || [])},
-  "improvement_summary": "1 sentence: the 2-3 core changes made and why they matter"
-}`,
-      undefined, 400
-    );
+    // === STAGE 2: Generate "why this works" breakdown ===
+    const whyRaw = await callClaude(
+      `You explain prompt improvements for educational Instagram content.
 
-    const concept = JSON.parse(conceptRaw.replace(/```json\n?|\n?```/g, '').trim());
+OKAY PROMPT: "${item.okay_prompt}"
+WELL PROMPTED: "${wellPromptRaw}"
+TECHNIQUE: ${item.technique}
 
-    // === STAGE 2: Run BAD prompt ===
-    const bad_output = await callClaude(concept.bad_prompt, undefined, 500);
-
-    // === STAGE 3: Run GOOD prompt ===
-    const good_output = await callClaude(concept.good_prompt, undefined, 500);
-
-    // === STAGE 4: Generate captions with hook ===
-    const captionsRaw = await callClaude(
-      `You write Instagram captions for @well.prompted — a sharp, no-BS page teaching prompt engineering through before/after demos.
-
-BEFORE/AFTER:
-Bad prompt: "${concept.bad_prompt}"
-Bad output (first 200 chars): "${bad_output.slice(0, 200)}"
-
-Good prompt: "${concept.good_prompt}"
-Good output (first 200 chars): "${good_output.slice(0, 200)}"
-
-What changed: ${concept.improvement_summary}
-Hook angle: "${contentItem?.hook}"
-
-CAPTION FORMULA:
-
-caption_bad (slide 1):
-- Line 1: HOOK — 5-8 words, punchy, makes them feel called out or curious. This is preview text.
-- Lines 2-3: 1-2 short sentences. Exactly what's wrong — what the AI had to guess, what's missing.
-- Final line: "Swipe to fix it." (exactly this)
-
-caption_good (slide 2):
-- Line 1: Name the technique. Bold, declarative. E.g. "Constraint-based prompting." or "Context loading changes everything."
-- Lines 2-3: 1-2 short sentences. What changed and exactly why it worked.
-- Final line: one of: "Save this." / "Screenshot it." / "Use it today." / "Try it now."
-
-TONE: No emojis. No hashtags. No corporate speak. Short sentences. Active voice. If it sounds like a newsletter, rewrite it.
-Never say: leverage, synergy, unlock, game-changer, elevate.
-
-Return JSON only:
-{"caption_bad": "...", "caption_good": "..."}`,
-      undefined, 400
-    );
-
-    const captions = JSON.parse(captionsRaw.replace(/```json\n?|\n?```/g, '').trim());
-
-    // === STAGE 5: Extract video snippets ===
-    const snippetsRaw = await callClaude(
-      `You extract the most revealing excerpt from AI outputs for a before/after prompt comparison video.
-
-The video shows the prompt, then the output streams in on screen. The excerpt needs to show the contrast clearly.
-
-BAD OUTPUT (shows AI failure):
-"${bad_output.slice(0, 800)}"
-
-GOOD OUTPUT (shows AI success):
-"${good_output.slice(0, 800)}"
-
-TOPIC: ${concept.topic}
-
-Extract:
-- bad_snippet: 2-4 sentences that show WHY the bad output fails. The most generic, vague, hedge-filled, or hollow section. Preserve bullet formatting if the output uses bullets (use "- " prefix).
-- good_snippet: 2-4 sentences that show WHY the good output succeeds. The most specific, concrete, impressive section. Preserve bullet formatting if the output uses bullets (use "- " prefix).
+Write 3-5 breakdown items explaining EXACTLY what changed and why it matters.
+Each item: a short punchy title (3-5 words) + one sentence explanation.
 
 Rules:
-- Must be a DIRECT QUOTE (copy exact words, preserve line breaks and bullets)
-- 40-70 words per snippet — enough to make the point, not the whole output
-- No ellipses — pick a contiguous excerpt that makes sense on its own
-- If the output has a bullet list, include 2-3 bullets as the snippet
+- Be specific — explain the REASON, not just what changed
+- Talk like a smart peer, not a professor
+- No jargon, no "leverage synergies"
+- Titles should be bold claims, not labels ("Business case beats tenure" not "Added context")
 
 Return JSON only:
-{
-  "bad_snippet": "...",
-  "good_snippet": "..."
-}`,
-      undefined, 400
-    );
+[
+  {"title": "...", "description": "..."},
+  {"title": "...", "description": "..."}
+]`, 500);
 
-    const snippets = JSON.parse(snippetsRaw.replace(/```json\n?|\n?```/g, '').trim());
+    const whyBreakdown = JSON.parse(whyRaw.slice(whyRaw.indexOf('['), whyRaw.lastIndexOf(']') + 1));
 
-    // === Save to DB ===
-    const { data, error } = await supabase.from('posts').insert({
+    // === STAGE 3: Generate caption ===
+    const captionRaw = await callClaude(
+      `Write an Instagram caption for a prompt engineering before/after post.
+
+SCENARIO: ${item.situation}
+OKAY PROMPT: "${item.okay_prompt}"
+TECHNIQUE: ${item.technique}
+CATEGORY TAGS: ${item.tags.join(' ')}
+
+Caption formula (follow exactly):
+Line 1: Hook — 5-8 words, calls out the mistake directly. Make it sting a little.
+Lines 2-3: 1-2 short punchy sentences on WHY the vague prompt fails. Be specific.
+Line 4: "Swipe for the prompt upgrade →"
+Line 5: Technique in caps + em dash + one line on what it does
+Blank line
+"—"
+"Follow @well.prompted for daily prompt upgrades."
+"Save this. You'll use it."
+Blank line
+Hashtags: ${BASE_TAGS} ${item.tags.join(' ')}
+
+Rules:
+- No emojis. No exclamation marks. No "Hey!" No corporate speak.
+- Write like a smart person texting a colleague, not a brand.
+- The hook should feel slightly uncomfortable — like someone calling out a mistake you make.
+
+Return ONLY the caption text, nothing else.`, 600);
+
+    // === STAGE 4: Save to DB ===
+    const { data: post, error } = await supabase.from('posts').insert({
       status: 'pending_review',
       format: 'before_after',
-      category,
-      techniques: concept.techniques || [],
-      bad_prompt: concept.bad_prompt,
-      bad_output,
-      good_prompt: concept.good_prompt,
-      good_output,
-      caption_bad: captions.caption_bad,
-      caption_good: captions.caption_good,
-      bad_output_snippet: snippets.bad_snippet,
-      good_output_snippet: snippets.good_snippet,
+      category: item.category,
+      techniques: [item.technique],
+      bad_prompt: item.okay_prompt,
+      good_prompt: wellPromptRaw,
+      good_output: JSON.stringify(whyBreakdown), // why breakdown stored here
+      bad_output: '',
+      caption_bad: captionRaw,
+      caption_good: '',
       render_status: 'pending',
     }).select().single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // === Notify Telegram ===
+    // Telegram notification
     if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
       await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: process.env.TELEGRAM_CHAT_ID,
-          parse_mode: 'HTML',
-          text: `🆕 <b>New post ready for review</b>\n\n<b>Topic:</b> ${concept.topic}\n<b>Category:</b> ${category}\n\n<b>Bad:</b> "${concept.bad_prompt.slice(0, 80)}..."\n<b>Good:</b> "${concept.good_prompt.slice(0, 80)}..."\n\n<a href="https://well-prompted-pi.vercel.app/queue">Review in portal →</a>`,
+          chat_id: process.env.TELEGRAM_CHAT_ID, parse_mode: 'HTML',
+          text: `🆕 <b>New post ready for review</b> [${item.id}]\n\n<i>"${item.okay_prompt}"</i>\n\n<a href="https://well-prompted-pi.vercel.app/queue">Review in portal →</a>`,
         }),
       });
     }
 
-    return NextResponse.json({ ...data, hook: contentItem?.hook });
+    return NextResponse.json({ ...post, okay_prompt: item.okay_prompt, well_prompt: wellPromptRaw, why_breakdown: whyBreakdown });
+
   } catch (err: any) {
     console.error('Generate error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

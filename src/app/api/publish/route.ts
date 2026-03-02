@@ -162,7 +162,10 @@ export async function GET() {
   for (const post of duePosts) {
     const res = await fetch(`${base}/api/publish`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.PORTAL_PASSWORD}`,
+      },
       body: JSON.stringify({ id: post.id, step: 'create' }),
     });
     results.push({ id: post.id, ...(await res.json()) });

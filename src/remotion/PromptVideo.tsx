@@ -117,7 +117,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
   // Timing
   const OUT_START  = Math.round(fps * 1.8);
-  const HOLD_START = durationInFrames - fps * 3; // 3s hold at end
+  const HOLD_START = durationInFrames - fps * 12; // 12s hold at end
   const FADE_START = durationInFrames - fps * 0.3;
 
   // Header fade in

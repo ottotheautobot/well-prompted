@@ -12,7 +12,7 @@ const RemotionRoot: React.FC = () => {
       <Composition
         id="PromptVideo"
         component={PromptVideo as unknown as React.ComponentType<Record<string, unknown>>}
-        durationInFrames={FPS * 11}
+        durationInFrames={FPS * 20}
         fps={FPS}
         width={WIDTH}
         height={HEIGHT}

@@ -19,7 +19,26 @@ const s3 = new S3Client({
 const S3_BUCKET        = process.env.REMOTION_S3_BUCKET || 'remotionlambda-useast2-v6np42nzpq';
 const ELEVENLABS_KEY   = process.env.ELEVENLABS_API_KEY!;
 const ELEVENLABS_VOICE = process.env.ELEVENLABS_VOICE_ID || 'q0IMILNRPxOgtBTS4taI';
-const SPEECH_SPEED     = 1.1; // slightly brisk — keeps energy up, fits in ~25-30s
+const SPEECH_SPEED     = 1.1;
+
+const BASE_URL = `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}`;
+
+// Music library — startFrom in seconds (tuned to skip intros, hit the good part)
+// Update startFrom values once Allen confirms best entry points per track
+const MUSIC_LIBRARY = [
+  { id: 'track-01', url: `${BASE_URL}/music/track-01.mp3`, name: 'In the Gloom',         startFrom: 8  },
+  { id: 'track-02', url: `${BASE_URL}/music/track-02.mp3`, name: 'Noble Criminal',        startFrom: 0  },
+  { id: 'track-03', url: `${BASE_URL}/music/track-03.mp3`, name: 'Off-White',             startFrom: 4  },
+  { id: 'track-04', url: `${BASE_URL}/music/track-04.mp3`, name: 'Paraleloz',             startFrom: 6  },
+  { id: 'track-05', url: `${BASE_URL}/music/track-05.mp3`, name: 'Strangers in Dub',     startFrom: 10 },
+  { id: 'track-06', url: `${BASE_URL}/music/track-06.mp3`, name: 'Weekend Instrumental', startFrom: 0  },
+];
+
+function pickMusic(postId: string) {
+  // Deterministic pick based on post ID so rerenders get the same track
+  const idx = postId.charCodeAt(0) % MUSIC_LIBRARY.length;
+  return MUSIC_LIBRARY[idx];
+} // slightly brisk — keeps energy up, fits in ~25-30s
 
 // At speed 1.1, effective wpm ≈ 165
 function estimateSec(text: string, speed = SPEECH_SPEED) {
@@ -104,11 +123,15 @@ Return JSON only:
     Body: buf, ContentType: 'audio/mpeg',
   }));
 
+  const music = pickMusic(id);
   const audioData = {
     url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3`,
     section1Sec: estimateSec(narration.section1),
     totalSec: estimateSec(fullScript),
     script: narration,
+    musicUrl: music.url,
+    musicStartSec: music.startFrom,
+    musicName: music.name,
   };
 
   // Save to DB in caption_good

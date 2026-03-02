@@ -26,9 +26,16 @@ export async function POST(req: NextRequest) {
 
     let audioUrl: string | undefined;
     let section1Sec: number | undefined;
+    let musicUrl: string | undefined;
+    let musicStartSec: number | undefined;
     try {
       const audioData = JSON.parse(post.caption_good || '{}');
-      if (audioData.url) { audioUrl = audioData.url; section1Sec = audioData.section1Sec; }
+      if (audioData.url) {
+        audioUrl = audioData.url;
+        section1Sec = audioData.section1Sec;
+        musicUrl = audioData.musicUrl;
+        musicStartSec = audioData.musicStartSec;
+      }
     } catch {}
 
     const render = await renderMediaOnLambda({
@@ -43,6 +50,7 @@ export async function POST(req: NextRequest) {
         category: post.category,
         postNumber: post.post_number || 1,
         ...(audioUrl ? { audioUrl, section1Sec } : {}),
+        ...(musicUrl ? { musicUrl, musicStartSec } : {}),
       },
       codec: 'h264',
       imageFormat: 'jpeg',

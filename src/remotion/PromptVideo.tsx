@@ -18,7 +18,9 @@ interface PromptVideoProps {
   category: string;
   postNumber: number;
   audioUrl?: string;
-  section1Sec?: number;  // when to transition to page 2 (audio-driven)
+  section1Sec?: number;
+  musicUrl?: string;
+  musicStartSec?: number; // where to start in the track (skip intros)
 }
 
 const BLUE  = '#0085FF';
@@ -105,6 +107,7 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
   okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, section1Sec,
+  musicUrl, musicStartSec = 0,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -157,6 +160,20 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
       {/* Narration audio */}
       {audioUrl && <Audio src={audioUrl} volume={1} />}
+
+      {/* Background music — low volume, fades out at end */}
+      {musicUrl && (
+        <Audio
+          src={musicUrl}
+          volume={(f) => {
+            const fadeOutStart = durationInFrames - fps * 2;
+            return interpolate(f, [fadeOutStart, durationInFrames], [0.07, 0], {
+              extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+            });
+          }}
+          startFrom={Math.round(musicStartSec * fps)}
+        />
+      )}
 
       {/* Accent bars */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8,

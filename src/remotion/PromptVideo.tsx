@@ -73,6 +73,27 @@ function computeLayout(okay: string, well: string) {
   return { fontSize: fs, hOkay, hWell };
 }
 
+// Dynamic font sizes for why breakdown based on number of items + text length
+function calcWhyFontSizes(items: WhyItem[], availH: number, cardW: number) {
+  const NUM_W      = 90;   // number circle (66px) + gap
+  const CARD_PAD_H = 80;   // horizontal padding inside card
+  const CARD_PAD_V = 72;   // vertical padding inside card (top+bottom)
+  const T_DESC_GAP = 10;   // gap between title and description
+  const textW = cardW - CARD_PAD_H - NUM_W;
+  const perItemH = availH / items.length;
+  const textAreaH = perItemH - CARD_PAD_V;
+
+  for (let ts = 46; ts >= 18; ts--) {
+    const ds = Math.round(ts * 0.87);
+    const maxTLines = Math.max(...items.map(it => countLines(it.title, ts, textW)));
+    const maxDLines = Math.max(...items.map(it => countLines(it.description, ds, textW)));
+    const titleH = maxTLines * ts * 1.25;
+    const descH  = maxDLines * ds * 1.5;
+    if (titleH + descH + T_DESC_GAP <= textAreaH) return { titleSize: ts, descSize: ds };
+  }
+  return { titleSize: 18, descSize: 16 };
+}
+
 // cross-fade for page transitions
 function pageAlpha(frame: number, start: number, end: number, fadeDur: number) {
   const fadeIn  = interpolate(frame, [start, start + fadeDur], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
@@ -144,6 +165,10 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   const { fontSize, hOkay, hWell } = computeLayout(okayPrompt, wellPrompt);
 
   const LOGO_BOT = 96;
+
+  // Why section font sizes — dynamic based on item count + text length
+  const WHY_AVAIL_H = H - LOGO_BOT - 56 - 20;
+  const { titleSize: whyTitleSize, descSize: whyDescSize } = calcWhyFontSizes(whyBreakdown, WHY_AVAIL_H, CARD_W);
   const LABEL_H  = 44;
   const GAP      = 24;
   const okayLabelTop = LOGO_BOT;
@@ -315,10 +340,11 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
               }}>
                 {/* Number */}
                 <div style={{
-                  width: 66, height: 66, borderRadius: 16,
+                  width: Math.max(44, whyTitleSize + 20), height: Math.max(44, whyTitleSize + 20),
+                  borderRadius: 14,
                   background: `${BLUE}15`, border: `1px solid ${BLUE}35`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: BLUE, fontSize: 32, fontWeight: 800, fontFamily: 'sans-serif',
+                  color: BLUE, fontSize: Math.round(whyTitleSize * 0.72), fontWeight: 800, fontFamily: 'sans-serif',
                   flexShrink: 0,
                 }}>
                   {i + 1}
@@ -326,13 +352,13 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
                 {/* Text */}
                 <div style={{ flex: 1 }}>
                   <div style={{
-                    color: '#E2E8F0', fontSize: 46, fontWeight: 700,
-                    fontFamily: 'sans-serif', lineHeight: 1.2, marginBottom: 12,
+                    color: '#E2E8F0', fontSize: whyTitleSize, fontWeight: 700,
+                    fontFamily: 'sans-serif', lineHeight: 1.25, marginBottom: 10,
                   }}>
                     {item.title}
                   </div>
                   <div style={{
-                    color: '#5A7090', fontSize: 40, fontFamily: 'sans-serif',
+                    color: '#5A7090', fontSize: whyDescSize, fontFamily: 'sans-serif',
                     lineHeight: 1.5,
                   }}>
                     {item.description}

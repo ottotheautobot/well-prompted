@@ -133,7 +133,9 @@ Rules:
 - No "in this video", no exclamation points, no padding.
 - Fragments are fine. Rhythm matters.
 - Word count is critical. Write the script, then count every word, then trim or expand to hit EXACTLY ${timings.totalTargetWords} words before returning.
-- Avoid "First," "Second," "Third," numbered starters, and em-dashes (—) — they create unnatural TTS pauses and eat time.
+- Avoid "First," "Second," "Third," numbered starters, and em-dashes (—).
+- Insert SSML break tags at natural pause moments — after the opening hook sentence, before/after "Here's the upgrade.", and before the pivot to the why breakdown. Use <break time="0.5s"/> for short beats and <break time="0.8s"/> for bigger transitions. Do not overuse — 3-4 breaks total max.
+- Do NOT count SSML tags in the word count.
 
 Return JSON only:
 {"script": "...", "wordCount": <number>}`
@@ -157,6 +159,7 @@ Return JSON only:
       text: fullScript,
       model_id: 'eleven_turbo_v2_5',
       speed: SPEECH_SPEED,
+      enable_ssml_parsing: true,
       voice_settings: { stability: 0.48, similarity_boost: 0.82, style: 0.12, use_speaker_boost: true },
     }),
   });

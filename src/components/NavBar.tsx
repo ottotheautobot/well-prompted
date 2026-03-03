@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: '/queue',     label: 'Queue' },
   { href: '/published', label: 'Published' },
   { href: '/schedule',  label: 'Schedule' },
+  { href: '/logs',      label: 'Logs' },
   { href: '/settings',  label: 'Settings' },
 ];
 

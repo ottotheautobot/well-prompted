@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logFire } from '@/lib/logger';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
   if (!step || step === 'create') {
     if (!videoUrl) return NextResponse.json({ error: 'Video not ready' }, { status: 400 });
 
+    logFire('publish', 'info', `Publishing started`, { postId: id, prompt: post.bad_prompt?.slice(0, 60) });
     await supabase.from('posts').update({ status: 'publishing' }).eq('id', id);
 
     const res = await igPost(`${IG_ACCT}/media`, {
@@ -48,6 +50,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.id) {
+      logFire('publish', 'error', `IG container creation failed`, { postId: id, detail: JSON.stringify(res).slice(0, 200) });
       await supabase.from('posts').update({ status: 'scheduled', publish_error: JSON.stringify(res.error) }).eq('id', id);
       return NextResponse.json({ error: 'Failed to create container', detail: res }, { status: 500 });
     }
@@ -72,10 +75,12 @@ export async function POST(req: NextRequest) {
     const publishRes = await igPost(`${IG_ACCT}/media_publish`, { creation_id: container_id });
 
     if (!publishRes.id) {
+      logFire('publish', 'error', `IG publish failed`, { postId: id, detail: JSON.stringify(publishRes).slice(0, 200) });
       await supabase.from('posts').update({ status: 'scheduled', publish_error: JSON.stringify(publishRes.error) }).eq('id', id);
       return NextResponse.json({ error: 'Publish failed', detail: publishRes }, { status: 500 });
     }
 
+    logFire('publish', 'info', `Published to Instagram`, { postId: id, mediaId: publishRes.id });
     await supabase.from('posts').update({
       status: 'published',
       published_at: new Date().toISOString(),

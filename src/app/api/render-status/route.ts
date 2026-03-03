@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logFire } from '@/lib/logger';
 import { getRenderProgress } from '@remotion/lambda/client';
 
 const supabase = createClient(
@@ -21,11 +22,14 @@ export async function POST(req: NextRequest) {
   });
 
   if (progress.fatalErrorEncountered) {
+    const msg = progress.errors?.[0]?.message || 'Render failed';
     await supabase.from('posts').update({ render_status: 'failed', status: 'approved' }).eq('id', id);
-    return NextResponse.json({ done: false, error: progress.errors?.[0]?.message || 'Render failed' });
+    logFire('render', 'error', `Lambda render fatal error: ${msg}`, { postId: id, renderId: render_id });
+    return NextResponse.json({ done: false, error: msg });
   }
 
   if (progress.done && progress.outputFile) {
+    logFire('render', 'info', `Render complete`, { postId: id, renderId: render_id, videoUrl: progress.outputFile });
     await supabase.from('posts').update({
       render_status: 'done',
       status: 'pending_video_review',

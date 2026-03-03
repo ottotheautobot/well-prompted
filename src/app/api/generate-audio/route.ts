@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logFire } from '@/lib/logger';
 import Anthropic from '@anthropic-ai/sdk';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 

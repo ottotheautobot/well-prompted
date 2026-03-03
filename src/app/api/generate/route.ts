@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { logFire } from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -258,6 +259,8 @@ export async function POST(req: NextRequest) {
 
   if (!item) return NextResponse.json({ error: 'No matching content item' }, { status: 400 });
 
+  logFire('generate', 'info', `Generating post [${item.id}]: "${item.okay_prompt.slice(0, 60)}"`, { scenario: item.id, category: item.category });
+
   try {
     // === STAGE 1: Generate well-prompted version ===
     const wellPromptRaw = await callClaude(
@@ -384,7 +387,12 @@ Return ONLY the caption text, nothing else.`, 600);
       render_status: 'pending',
     }).select().single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      logFire('generate', 'error', `DB insert failed: ${error.message}`);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    logFire('generate', 'info', `Post created: "${item.okay_prompt.slice(0, 60)}"`, { postId: post.id, category: item.category });
 
     // === STAGE 6: Kick off audio generation async (separate endpoint, avoids timeout) ===
     const audioData = null;
@@ -409,7 +417,7 @@ Return ONLY the caption text, nothing else.`, 600);
     return NextResponse.json({ ...post, okay_prompt: item.okay_prompt, well_prompt: wellPromptRaw, why_breakdown: whyBreakdown, audio: audioData });
 
   } catch (err: any) {
-    console.error('Generate error:', err);
+    logFire('generate', 'error', `Generation failed: ${err.message}`, { stack: err.stack?.slice(0, 300) });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

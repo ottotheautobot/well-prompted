@@ -6,7 +6,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Only protect the portal pages and mutation APIs
-  const isPortalPage = pathname.startsWith('/queue') || pathname.startsWith('/schedule') || pathname.startsWith('/published') || pathname.startsWith('/settings');
+  const isPortalPage = pathname.startsWith('/queue') || pathname.startsWith('/schedule') || pathname.startsWith('/published') || pathname.startsWith('/settings') || pathname.startsWith('/logs');
   // GET /api/publish is the cron trigger — exempt from auth
   const isCronEndpoint = pathname === '/api/publish' && req.method === 'GET';
   if (isCronEndpoint) return NextResponse.next();
@@ -44,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/queue/:path*', '/schedule/:path*', '/published/:path*', '/settings/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/generate-audio/:path*', '/api/schedule/:path*', '/api/publish/:path*', '/api/delete/:path*', '/api/metrics/:path*', '/api/settings/:path*', '/api/regenerate-section/:path*', '/api/render-check/:path*'],
+  matcher: ['/queue/:path*', '/schedule/:path*', '/published/:path*', '/settings/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/generate-audio/:path*', '/api/schedule/:path*', '/api/publish/:path*', '/api/delete/:path*', '/api/metrics/:path*', '/api/settings/:path*', '/api/regenerate-section/:path*', '/api/render-check/:path*', '/api/logs/:path*', '/logs/:path*'],
 };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logFire } from '@/lib/logger';
 import Anthropic from '@anthropic-ai/sdk';
 
 const supabase = createClient(
@@ -22,6 +23,8 @@ export async function POST(req: NextRequest) {
 
   const { data: post } = await supabase.from('posts').select('*').eq('id', id).single();
   if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+
+  logFire('regen', 'info', `Regenerating section: ${section}`, { postId: id });
 
   // ── WHY BREAKDOWN ──────────────────────────────────────────
   if (section === 'why') {

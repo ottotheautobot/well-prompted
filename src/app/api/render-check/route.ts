@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logFire } from '@/lib/logger';
 import { getRenderProgress } from '@remotion/lambda/client';
 
 const supabase = createClient(
@@ -19,6 +20,8 @@ export async function GET(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (!stuck || stuck.length === 0) return NextResponse.json({ checked: 0, resolved: [] });
+
+  logFire('render-check', 'info', `Checking ${stuck.length} stuck render(s)`);
 
   const resolved: string[] = [];
   const failed: string[] = [];
@@ -41,9 +44,11 @@ export async function GET(req: NextRequest) {
       });
 
       if (progress.fatalErrorEncountered) {
+        logFire('render-check', 'error', `Render fatal error for post ${post.id}`, { postId: post.id, renderId: ids.render_id });
         await supabase.from('posts').update({ status: 'approved', render_status: 'failed', render_ids: null }).eq('id', post.id);
         failed.push(post.id);
       } else if (progress.done && progress.outputFile) {
+        logFire('render-check', 'info', `Resolved stuck render for post ${post.id}`, { postId: post.id, renderId: ids.render_id });
         await supabase.from('posts').update({
           status: 'pending_video_review',
           render_status: 'done',

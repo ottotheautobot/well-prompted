@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logFire } from '@/lib/logger';
 import { renderMediaOnLambda } from '@remotion/lambda/client';
 
 const supabase = createClient(
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   if (error || !post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
 
   await supabase.from('posts').update({ render_status: 'rendering', status: 'rendering' }).eq('id', id);
+  logFire('render', 'info', `Render started`, { postId: id, prompt: post.bad_prompt?.slice(0, 60) });
 
   try {
     let whyBreakdown = [];
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       render_ids: { render_id: render.renderId, bucket: render.bucketName },
     }).eq('id', id);
 
+    logFire('render', 'info', `Render queued on Lambda`, { postId: id, renderId: render.renderId });
     return NextResponse.json({
       success: true,
       render_id: render.renderId,
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     await supabase.from('posts').update({ render_status: 'failed', status: 'approved' }).eq('id', id);
+    logFire('render', 'error', `Render failed: ${err.message}`, { postId: id, stack: err.stack?.slice(0, 300) });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -76,16 +76,19 @@ export default function QueuePage() {
 
   useEffect(() => { fetchPosts(); }, []);
 
-  // Resume stuck renders
+  // On load: server resolves any stuck renders, then re-fetch + resume client polling
   useEffect(() => {
     const resume = async () => {
+      await fetch('/api/render-check'); // server-side resolution (handles expired/done)
       const res = await fetch('/api/posts?status=rendering');
       if (!res.ok) return;
-      const stuck = await res.json();
-      for (const post of stuck) {
+      const still = await res.json();
+      // Any still actually rendering → resume client poll
+      for (const post of still) {
         const ids = (post as any).render_ids;
         if (ids?.render_id) pollRenderStatus(post.id, ids.render_id, ids.bucket);
       }
+      if (still.length !== posts.length) fetchPosts(); // refresh if anything changed
     };
     resume();
   // eslint-disable-next-line react-hooks/exhaustive-deps

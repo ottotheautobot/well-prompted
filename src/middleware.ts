@@ -44,5 +44,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/queue/:path*', '/schedule/:path*', '/published/:path*', '/settings/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/generate-audio/:path*', '/api/schedule/:path*', '/api/publish/:path*', '/api/delete/:path*', '/api/metrics/:path*', '/api/settings/:path*', '/api/regenerate-section/:path*'],
+  matcher: ['/queue/:path*', '/schedule/:path*', '/published/:path*', '/settings/:path*', '/api/approve/:path*', '/api/video-approve/:path*', '/api/render/:path*', '/api/generate/:path*', '/api/generate-audio/:path*', '/api/schedule/:path*', '/api/publish/:path*', '/api/delete/:path*', '/api/metrics/:path*', '/api/settings/:path*', '/api/regenerate-section/:path*', '/api/render-check/:path*'],
 };

@@ -108,7 +108,7 @@ export async function GET() {
   const now = new Date().toISOString();
   const { data: duePosts } = await supabase
     .from('posts').select('id').eq('status', 'scheduled')
-    .lte('scheduled_at', now).not('video_url', 'is', null);
+    .lte('scheduled_at', now).not('video_bad_url', 'is', null);
 
   if (!duePosts?.length) return NextResponse.json({ published: 0, message: 'No posts due' });
 

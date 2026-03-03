@@ -100,10 +100,11 @@ OKAY PROMPT rules:
 - 8-15 words max
 
 WELL PROMPTED rules:
-- Same core request but with: named recipient/context, emotion/constraint, specific goal, proof/achievement, desired tone
-- 80-150 words
-- Should feel achievable, not over-engineered
-- No bullet points — flowing sentence structure
+- 40-65 words MAX. Punchy, not a requirements doc.
+- Same core request but add 3-4 targeted improvements (context, constraint, tone, specific detail)
+- Flowing sentences — no bullet points, no headers
+- Use realistic placeholders like [Manager's name], [15%], [specific achievement]
+- Should feel like something a smart person would actually type, not a template
 
 Return JSON only:
 {"okayPrompt": "...", "wellPrompt": "..."}`, 600

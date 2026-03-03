@@ -271,14 +271,14 @@ OKAY PROMPT (how a real person types it at 11pm, half-asleep):
 "${item.okay_prompt}"
 
 Write the "well prompted" version. Rules:
-- Add ONLY 3-5 targeted improvements — not a laundry list
-- Each addition must have an obvious reason it matters
-- Must feel achievable by a non-technical person
-- Use realistic placeholder values like [Manager's name], [15%], [specific achievement]
-- First person voice, same task — just much more specific
-- Do NOT use markdown, headers, or bullet points in the prompt itself — it's a prompt, not a document
+- 40-65 words MAX. Punchy, not a requirements doc.
+- Add 3-4 targeted improvements only — the ones that actually change the output
+- Each addition must obviously matter (context, constraint, tone, specific detail)
+- Use realistic placeholders like [Manager's name], [15%], [specific achievement]
+- First person voice, flowing sentences — NOT bullet points, NOT headers
+- Should feel like something a smart person would actually type, not a template
 
-Return ONLY the prompt text, nothing else.`, 400);
+Return ONLY the prompt text, nothing else.`, 300);
 
     // === STAGE 2: Generate "why this works" breakdown ===
     const whyRaw = await callClaude(

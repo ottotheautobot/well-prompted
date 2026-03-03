@@ -69,8 +69,8 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
   // Calibrated from measurements: ~2.5 wps on average (varies by sentence style)
   // Target audio to fill the full video, minus a 2s grace buffer at the end
   const WPS = 2.5;
-  // Narration ends 7s before video does (5s reading hold + 2s buffer before outro)
-  const totalTargetWords = Math.round((totalVideoDurationSec - 7) * WPS);
+  // Narration targets 27s of speech for a 30s video — only 3s gap for logo outro
+  const totalTargetWords = Math.round((totalVideoDurationSec - 3) * WPS);
 
   return { totalVideoDurationSec, totalTargetWords, p1TotalSec, p2StartSec, typingEndSec };
 }
@@ -121,7 +121,7 @@ VIDEO STRUCTURE:
 
 The narration is ONE continuous script playing start to finish. It should naturally cover both pages — first explain the prompt upgrade, then walk the why breakdown. The transitions should feel like one flowing monologue, not two separate sections.
 
-SCRIPT — EXACTLY ${timings.totalTargetWords} words total:
+SCRIPT — EXACTLY ${timings.totalTargetWords} words total (targeting ~${timings.totalVideoDurationSec - 3} seconds of speech):
 - Open by calling out what's wrong with the okay prompt (one sharp sentence)
 - "Here's the upgrade." — then briefly explain what the well prompted version does differently
 - Naturally pivot around the ${timings.p1TotalSec.toFixed(0)}s mark to "here's why it works" — the viewer will see the why page at this point

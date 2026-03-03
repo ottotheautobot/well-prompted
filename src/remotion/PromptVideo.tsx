@@ -107,7 +107,7 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
   const ITEM_DELAY = Math.round(fps * 0.45);
   const whyAnimDur = Math.round(fps * 0.3) + itemCount * ITEM_DELAY;
   const FADE       = Math.round(fps * 0.45);
-  const HOLD_END   = Math.round(fps * 8); // 8s reading hold after why page (5s added per Allen)
+  const HOLD_END   = Math.round(fps * 1); // 1s breath before logo outro — narration covers reading time
 
   // Always typing-based — 5s after well prompt finishes
   const WELL_TYPE_START = Math.round(fps * 1.2);

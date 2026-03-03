@@ -59,7 +59,7 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
 
   const itemCount        = whyBreakdown.length;
   const whyAnimSec       = 0.3 + itemCount * 0.45;
-  const p2TotalSec       = whyAnimSec + 3;             // animation + 3s hold
+  const p2TotalSec       = whyAnimSec + 8;             // animation + 8s reading hold
   const p2StartSec       = p1TotalSec + FADE_SEC;
 
   const totalVideoDurationSec = p2StartSec + p2TotalSec + FADE_SEC;
@@ -67,7 +67,8 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
   // Calibrated from measurements: ~2.5 wps on average (varies by sentence style)
   // Target audio to fill the full video, minus a 2s grace buffer at the end
   const WPS = 2.5;
-  const totalTargetWords = Math.round((totalVideoDurationSec - 2) * WPS);
+  // Narration ends 7s before video does (5s reading hold + 2s buffer before outro)
+  const totalTargetWords = Math.round((totalVideoDurationSec - 7) * WPS);
 
   return { totalVideoDurationSec, totalTargetWords, p1TotalSec, p2StartSec, typingEndSec };
 }

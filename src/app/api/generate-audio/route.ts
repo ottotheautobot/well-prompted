@@ -160,7 +160,7 @@ Return JSON only:
   const actualDurationSec = mp3DurationSec(buf);
   const music = pickMusic(id);
   const audioData = {
-    url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3`,
+    url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3?v=${Date.now()}`,
     totalSec: actualDurationSec,  // actual duration from buffer, not word-count estimate
     totalVideoDurationSec: timings.totalVideoDurationSec,
     script: narration.script,

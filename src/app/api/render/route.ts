@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     try {
       const audioData = JSON.parse(post.caption_good || '{}');
       if (audioData.url) {
-        audioUrl      = audioData.url;
+        audioUrl      = audioData.url.split('?')[0]; // strip cache-bust param for Lambda
         totalAudioSec = audioData.totalSec;
         musicUrl      = audioData.musicUrl;
         musicStartSec = audioData.musicStartSec;

@@ -310,13 +310,15 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           <div style={{ flex: 1, height: 1, background: '#1A2540' }} />
         </div>
 
-        {/* Items — evenly spaced in remaining height */}
+        {/* Items — anchored to top, safe zone padding at bottom */}
         <div style={{
           position: 'absolute',
           top: LOGO_BOT + 56,
-          left: MX, right: MX, bottom: 20,
+          left: MX, right: MX,
+          bottom: BOTTOM_SAFE,
           display: 'flex', flexDirection: 'column',
-          justifyContent: 'space-evenly',
+          justifyContent: 'flex-start',
+          gap: 20,
         }}>
           {whyBreakdown.map((item, i) => {
             const iStart = P2_START + Math.round(fps * 0.3) + i * ITEM_DELAY;
@@ -335,7 +337,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
                 border: `1px solid #1A2540`,
                 borderLeft: `4px solid ${BLUE}50`,
                 borderRadius: 18,
-                padding: '36px 40px',
+                padding: '24px 32px',
               }}>
                 {/* Number */}
                 <div style={{

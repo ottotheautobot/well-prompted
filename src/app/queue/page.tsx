@@ -262,7 +262,9 @@ export default function QueuePage() {
                 onPublishNow={handlePublishNow}
                 onDelete={handleDelete}
                 onGenerateAudio={async (id) => {
+                  setActionLoading(id + '-audio');
                   await fetch('/api/generate-audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+                  setActionLoading(null);
                   await fetchPosts();
                 }}
               />
@@ -485,23 +487,32 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
 
             {/* Audio section */}
             {localPost.format === 'before_after' && (
-              <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #1A2540', display: 'flex', alignItems: 'center', gap: 12 }}>
-                {hasAudio ? (
-                  <>
-                    <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, fontFamily: 'sans-serif' }}>🎙 Audio Ready</span>
-                    <span style={{ fontSize: 11, color: '#4A6080' }}>~{Math.round(audioData!.totalSec || 0)}s</span>
-                    <audio src={audioData!.url} controls style={{ height: 28, flex: 1 }} />
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: 11, color: '#4A6080', fontFamily: 'sans-serif' }}>No audio</span>
-                    <button
-                      onClick={() => onGenerateAudio(post.id)}
-                      style={{ fontSize: 11, background: '#0085FF15', color: '#0085FF', border: '1px solid #0085FF30', padding: '5px 12px', borderRadius: 7, cursor: 'pointer', fontFamily: 'sans-serif' }}
-                    >
-                      Generate Audio
-                    </button>
-                  </>
+              <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #1A2540' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {hasAudio ? (
+                    <>
+                      <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, fontFamily: 'sans-serif' }}>🎙 Audio Ready</span>
+                      <span style={{ fontSize: 11, color: '#4A6080' }}>~{Math.round(audioData!.totalSec || 0)}s</span>
+                      <audio src={audioData!.url} controls style={{ height: 28, flex: 1 }} />
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 11, color: '#4A6080', fontFamily: 'sans-serif' }}>No audio yet</span>
+                  )}
+                  <button
+                    onClick={() => onGenerateAudio(localPost.id)}
+                    disabled={al === localPost.id + '-audio'}
+                    style={{ fontSize: 11, background: hasAudio ? 'transparent' : '#0085FF15', color: hasAudio ? '#5A7090' : '#0085FF', border: `1px solid ${hasAudio ? '#1A2540' : '#0085FF30'}`, padding: '5px 12px', borderRadius: 7, cursor: 'pointer', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}
+                  >
+                    {al === localPost.id + '-audio' ? '⏳ Generating...' : hasAudio ? '↻ Regen Audio' : '🎙 Generate Audio'}
+                  </button>
+                </div>
+                {hasAudio && audioData?.script && (
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ fontSize: 11, color: '#3A5070', fontFamily: 'sans-serif', cursor: 'pointer' }}>View narration script</summary>
+                    <p style={{ fontSize: 11, color: '#5A7090', fontFamily: 'sans-serif', lineHeight: 1.6, marginTop: 6, padding: '8px 12px', background: '#060910', borderRadius: 6, border: '1px solid #1A2540' }}>
+                      {audioData.script}
+                    </p>
+                  </details>
                 )}
               </div>
             )}

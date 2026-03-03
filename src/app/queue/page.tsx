@@ -62,6 +62,7 @@ export default function QueuePage() {
   const [generating, setGenerating] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [renderProgress, setRenderProgress] = useState<Record<string, number>>({}); // postId → 0-1
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -130,12 +131,18 @@ export default function QueuePage() {
     setActionLoading(null);
   };
 
-  const pollRenderStatus = async (id: string, render_id: string, bucket: string) => {
+  const pollRenderStatus = useCallback(async (id: string, render_id: string, bucket: string) => {
     const res = await fetch('/api/render-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, render_id, bucket }) });
     const data = await res.json();
-    if (data.done) { await fetchPosts(); }
-    else if (!data.error) { setTimeout(() => pollRenderStatus(id, render_id, bucket), 10000); }
-  };
+    if (data.done) {
+      setRenderProgress(p => { const n = { ...p }; delete n[id]; return n; });
+      await fetchPosts();
+    } else if (!data.error) {
+      setRenderProgress(p => ({ ...p, [id]: data.progress ?? 0 }));
+      setTimeout(() => pollRenderStatus(id, render_id, bucket), 5000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRender = async (id: string) => {
     setActionLoading(id + '-render');
@@ -255,6 +262,7 @@ export default function QueuePage() {
                 expanded={expanded === post.id}
                 onToggle={() => setExpanded(expanded === post.id ? null : post.id)}
                 actionLoading={actionLoading}
+                renderProgress={renderProgress[post.id]}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onRender={handleRender}
@@ -292,6 +300,7 @@ const btnOutlineStyle = (color: string): React.CSSProperties => ({
 
 // ── PostCard component ────────────────────────────────────────
 interface PostCardProps {
+  renderProgress?: number;
   post: Post;
   expanded: boolean;
   onToggle: () => void;
@@ -305,7 +314,7 @@ interface PostCardProps {
   onGenerateAudio: (id: string) => void;
 }
 
-function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject, onRender, onVideoApprove, onPublishNow, onDelete, onGenerateAudio }: PostCardProps) {
+function PostCard({ post, expanded, onToggle, actionLoading, renderProgress, onApprove, onReject, onRender, onVideoApprove, onPublishNow, onDelete, onGenerateAudio }: PostCardProps) {
   const al = actionLoading;
   const [localPost, setLocalPost] = useState(post);
   const [regen, setRegen] = useState<string | null>(null);
@@ -387,7 +396,18 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
         </span>
 
         {post.status === 'rendering' && (
-          <span style={{ fontSize: 11, color: '#60A5FA', animation: 'pulse 2s infinite' }}>● rendering</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 140 }}>
+            <div style={{ flex: 1, height: 4, background: '#1A2540', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 2, background: '#0085FF',
+                width: `${Math.round((renderProgress ?? 0) * 100)}%`,
+                transition: 'width 0.5s ease',
+              }} />
+            </div>
+            <span style={{ fontSize: 11, color: '#60A5FA', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+              {renderProgress != null ? `${Math.round(renderProgress * 100)}%` : '…'}
+            </span>
+          </div>
         )}
       </div>
 

@@ -33,7 +33,7 @@ WELL PROMPTED: "${post.good_prompt}"
 
 Write 4-5 breakdown items. Each needs:
 - TITLE: 4-7 words, plain English, active voice. No buzzwords. Sounds like something you'd actually say out loud. NOT "Leverages Contextual Specificity" — YES "Naming the person changes everything"
-- DESCRIPTION: 1-2 sentences. Explain the actual mechanism — why does this specific change make the AI respond better? Be concrete. No filler.
+- DESCRIPTION: 1 sentence max. Explain the actual mechanism — why does this specific change make the AI respond better? Be concrete, no filler.
 
 Avoid: nominalizations, passive voice, words like "leverages / facilitates / enables / anchors / reframes / optimizes"
 Write like you're explaining it to a colleague over lunch, not in a performance review.

@@ -510,7 +510,9 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
                   <details style={{ marginTop: 8 }}>
                     <summary style={{ fontSize: 11, color: '#3A5070', fontFamily: 'sans-serif', cursor: 'pointer' }}>View narration script</summary>
                     <p style={{ fontSize: 11, color: '#5A7090', fontFamily: 'sans-serif', lineHeight: 1.6, marginTop: 6, padding: '8px 12px', background: '#060910', borderRadius: 6, border: '1px solid #1A2540' }}>
-                      {audioData.script}
+                      {typeof audioData.script === 'string'
+                        ? audioData.script
+                        : [(audioData.script as any).section1, (audioData.script as any).section2].filter(Boolean).join(' ')}
                     </p>
                   </details>
                 )}

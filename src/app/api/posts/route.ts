@@ -9,8 +9,10 @@ const supabase = createClient(
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status');
+  const id     = searchParams.get('id');
 
   let query = supabase.from('posts').select('*').order('created_at', { ascending: false });
+  if (id)     query = (query as any).eq('id', id);
   if (status) query = query.eq('status', status);
 
   const { data, error } = await query;

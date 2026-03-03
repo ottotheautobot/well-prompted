@@ -6,10 +6,14 @@ import NavBar from '@/components/NavBar';
 interface Post {
   id: string;
   bad_prompt: string;
+  good_prompt?: string;
+  good_output?: string;
+  caption_bad?: string;
   category: string;
   format: string;
   status: string;
   scheduled_at: string | null;
+  video_bad_url?: string;
 }
 
 const SLOT_SCHEDULE: Record<number, string[]> = {
@@ -95,6 +99,12 @@ export default function SchedulePage() {
   const [autoLoading, setAutoLoading] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Post | null>(null);
+
+  const fetchPost = useCallback(async (id: string) => {
+    const res = await fetch(`/api/posts?id=${id}`);
+    if (res.ok) { const data = await res.json(); setSelected(Array.isArray(data) ? data[0] : data); }
+  }, []);
 
   const fetchAll = useCallback(async () => {
     const [pRes, sRes] = await Promise.all([
@@ -142,6 +152,12 @@ export default function SchedulePage() {
     const et = getETOffset();
     const etDate = new Date(first.utc.getTime() + et*3600000);
     return `Week of ${DOW_FULL[new Date(etDate.getTime() - (etDate.getUTCDay()===0?6:etDate.getUTCDay()-1)*86400000).getUTCDay()]}`; // simplified
+  };
+
+  const handleClick = (post: Post, e: React.MouseEvent) => {
+    if (draggingId) return; // don't open panel mid-drag
+    e.stopPropagation();
+    fetchPost(post.id);
   };
 
   const handleDrop = (slotKey: string) => {
@@ -220,6 +236,7 @@ export default function SchedulePage() {
                   dragging={draggingId === post.id}
                   onDragStart={() => setDraggingId(post.id)}
                   onDragEnd={() => setDraggingId(null)}
+                  onClick={e => handleClick(post, e)}
                   catColor={catColor(post.category)}
                 />
               ))}
@@ -272,6 +289,7 @@ export default function SchedulePage() {
                                   onDragStart={() => { if (post) setDraggingId(post.id); }}
                                   onDragEnd={() => setDraggingId(null)}
                                   onUnschedule={() => { if (post) assign(post.id, null); }}
+                                  onClick={post ? (e: React.MouseEvent) => handleClick(post, e) : undefined}
                                 />
                               );
                             })}
@@ -286,19 +304,106 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
+
+      {/* Detail panel */}
+      {selected && (
+        <div
+          onClick={() => setSelected(null)}
+          style={{ position:'fixed', inset:0, background:'#00000060', zIndex:100, display:'flex', justifyContent:'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width:420, background:'#0B1220', height:'100%', overflowY:'auto', padding:28, boxShadow:'-4px 0 24px #00000080', display:'flex', flexDirection:'column', gap:18 }}
+          >
+            {/* Header */}
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+              <div>
+                <div style={{ fontSize:11, color: catColor(selected.category), fontFamily:'sans-serif', textTransform:'uppercase', letterSpacing:2, marginBottom:4 }}>
+                  {selected.category.replace(/_/g,' ')} · {selected.format.replace(/_/g,' ')}
+                </div>
+                {selected.scheduled_at && (
+                  <div style={{ fontSize:11, color:'#34D399', fontFamily:'sans-serif' }}>
+                    📅 {new Date(selected.scheduled_at).toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true })} ET
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setSelected(null)} style={{ background:'transparent', border:'none', color:'#5A7090', fontSize:20, cursor:'pointer', lineHeight:1 }}>×</button>
+            </div>
+
+            {/* Okay prompt */}
+            <div>
+              <div style={{ fontSize:11, color:'#FF2D78', fontWeight:700, fontFamily:'sans-serif', letterSpacing:2, marginBottom:6 }}>OKAY PROMPT</div>
+              <div style={{ background:'#080B14', border:'1px solid #FF2D7830', borderLeft:'3px solid #FF2D78', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#A8B8CC', fontFamily:'monospace', lineHeight:1.6 }}>
+                {selected.bad_prompt}
+              </div>
+            </div>
+
+            {/* Well prompted */}
+            {selected.good_prompt && (
+              <div>
+                <div style={{ fontSize:11, color:'#0085FF', fontWeight:700, fontFamily:'sans-serif', letterSpacing:2, marginBottom:6 }}>WELL PROMPTED</div>
+                <div style={{ background:'#080B14', border:'1px solid #0085FF30', borderLeft:'3px solid #0085FF', borderRadius:8, padding:'10px 14px', fontSize:13, color:'#C8D8F0', fontFamily:'monospace', lineHeight:1.6 }}>
+                  {selected.good_prompt}
+                </div>
+              </div>
+            )}
+
+            {/* Why breakdown */}
+            {(() => {
+              try {
+                const items: {title:string;description:string}[] = JSON.parse(selected.good_output || '[]');
+                if (!items.length) return null;
+                return (
+                  <div>
+                    <div style={{ fontSize:11, color:'#5A7090', fontWeight:700, fontFamily:'sans-serif', letterSpacing:2, marginBottom:8 }}>WHY THIS WORKS</div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      {items.map((item, i) => (
+                        <div key={i} style={{ background:'#080B14', border:'1px solid #1A2540', borderRadius:8, padding:'10px 14px' }}>
+                          <div style={{ fontSize:12, color:'#E2E8F0', fontWeight:700, fontFamily:'sans-serif', marginBottom:3 }}>{item.title}</div>
+                          <div style={{ fontSize:11, color:'#5A7090', fontFamily:'sans-serif', lineHeight:1.5 }}>{item.description}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              } catch { return null; }
+            })()}
+
+            {/* Caption */}
+            {selected.caption_bad && (
+              <div>
+                <div style={{ fontSize:11, color:'#5A7090', fontWeight:700, fontFamily:'sans-serif', letterSpacing:2, marginBottom:6 }}>CAPTION</div>
+                <div style={{ background:'#080B14', border:'1px solid #1A2540', borderRadius:8, padding:'10px 14px', fontSize:11, color:'#8A9AB0', fontFamily:'sans-serif', lineHeight:1.7, whiteSpace:'pre-line' }}>
+                  {selected.caption_bad}
+                </div>
+              </div>
+            )}
+
+            {/* Video preview */}
+            {selected.video_bad_url && (
+              <div>
+                <div style={{ fontSize:11, color:'#5A7090', fontWeight:700, fontFamily:'sans-serif', letterSpacing:2, marginBottom:6 }}>VIDEO</div>
+                <video src={selected.video_bad_url} controls style={{ width:'100%', borderRadius:10, border:'1px solid #1A2540' }} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function PostChip({ post, dragging, onDragStart, onDragEnd, catColor }: {
+function PostChip({ post, dragging, onDragStart, onDragEnd, onClick, catColor }: {
   post: Post; dragging: boolean;
-  onDragStart: () => void; onDragEnd: () => void; catColor: string;
+  onDragStart: () => void; onDragEnd: () => void;
+  onClick: (e: React.MouseEvent) => void; catColor: string;
 }) {
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onClick={onClick}
       style={{
         background: dragging ? '#1A2540' : '#0B1220',
         border: `1px solid ${catColor}40`,
@@ -317,11 +422,12 @@ function PostChip({ post, dragging, onDragStart, onDragEnd, catColor }: {
   );
 }
 
-function SlotCell({ slot, post, isOver, draggingId, catColor, onDragOver, onDragLeave, onDrop, onDragStart, onDragEnd, onUnschedule }: {
+function SlotCell({ slot, post, isOver, draggingId, catColor, onDragOver, onDragLeave, onDrop, onDragStart, onDragEnd, onUnschedule, onClick }: {
   slot: { key: string; timeLabel: string };
   post: Post | null; isOver: boolean; draggingId: string | null; catColor: string;
   onDragOver: (e: React.DragEvent) => void; onDragLeave: () => void; onDrop: () => void;
   onDragStart: () => void; onDragEnd: () => void; onUnschedule: () => void;
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   const isPast = new Date(slot.key) < new Date();
   return (
@@ -344,6 +450,7 @@ function SlotCell({ slot, post, isOver, draggingId, catColor, onDragOver, onDrag
           draggable
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
+          onClick={onClick}
           style={{ padding:'18px 6px 6px', cursor:'grab' }}
         >
           <div style={{ fontSize:10, color:catColor, fontFamily:'sans-serif', lineHeight:1.3, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>

@@ -190,7 +190,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           src={musicUrl}
           volume={(f) => {
             const fadeOutStart = durationInFrames - fps * 2;
-            return interpolate(f, [fadeOutStart, durationInFrames], [0.07, 0], {
+            return interpolate(f, [fadeOutStart, durationInFrames], [0.18, 0], {
               extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
             });
           }}

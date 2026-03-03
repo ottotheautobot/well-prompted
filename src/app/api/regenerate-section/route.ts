@@ -85,42 +85,25 @@ Return the caption text only, no JSON.`, 400
     return NextResponse.json({ success: true, section: 'caption', data: raw.trim() });
   }
 
-  // ── PROMPTS (okay + well prompted) ─────────────────────────
+  // ── WELL PROMPTED only (okay prompt stays as-is) ───────────
   if (section === 'prompts') {
     const raw = await ask(
-      `You are a prompt engineering expert. Rewrite a before/after prompt pair on this topic.
+      `You are a prompt engineering expert. Rewrite the "well prompted" version of this prompt.
 
-TOPIC: "${post.bad_prompt}"
+OKAY PROMPT (do not change this): "${post.bad_prompt}"
 
-Create a new "okay prompt" and "well prompted" version.
-
-OKAY PROMPT rules:
-- First-person, no formatting, no context, vague scope
-- Sounds like a real person typing at 11pm
-- 8-15 words max
-
-WELL PROMPTED rules:
+Write a new "well prompted" version. Rules:
 - 40-65 words MAX. Punchy, not a requirements doc.
-- Same core request but add 3-4 targeted improvements (context, constraint, tone, specific detail)
+- Add 3-4 targeted improvements (context, constraint, tone, specific detail)
 - Flowing sentences — no bullet points, no headers
 - Use realistic placeholders like [Manager's name], [15%], [specific achievement]
 - Should feel like something a smart person would actually type, not a template
 
-Return JSON only:
-{"okayPrompt": "...", "wellPrompt": "..."}`, 600
+Return ONLY the prompt text, nothing else.`, 300
     );
-    let prompts: { okayPrompt: string; wellPrompt: string } = { okayPrompt: '', wellPrompt: '' };
-    try {
-      const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-      prompts = JSON.parse(raw.slice(s, e + 1));
-    } catch {
-      return NextResponse.json({ error: 'Failed to parse prompts' }, { status: 500 });
-    }
-    await supabase.from('posts').update({
-      bad_prompt: prompts.okayPrompt,
-      good_prompt: prompts.wellPrompt,
-    }).eq('id', id);
-    return NextResponse.json({ success: true, section: 'prompts', data: prompts });
+    const wellPrompt = raw.trim();
+    await supabase.from('posts').update({ good_prompt: wellPrompt }).eq('id', id);
+    return NextResponse.json({ success: true, section: 'prompts', data: { okayPrompt: post.bad_prompt, wellPrompt } });
   }
 
   return NextResponse.json({ error: `Unknown section: ${section}` }, { status: 400 });

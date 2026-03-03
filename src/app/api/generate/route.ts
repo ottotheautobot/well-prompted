@@ -290,7 +290,7 @@ TECHNIQUE: ${item.technique}
 
 Write 4-5 breakdown items. Each needs:
 - TITLE: 4-6 words, plain English, active voice. Sounds like something you'd say out loud. NOT "Leverages Contextual Specificity" — YES "Naming the person changes everything"
-- DESCRIPTION: 10-15 words MAX. One punchy sentence. Why does this change make the AI respond better? Cut every word that doesn't earn its place.
+- DESCRIPTION: Under 12 words. Hard limit. Example: "AI stops guessing and writes to a real person." Count the words. Cut ruthlessly.
 
 Avoid: nominalizations, passive voice, buzzwords like leverages / facilitates / enables / anchors / reframes / optimizes
 Write like you're explaining it to a colleague over lunch, not in a performance review.

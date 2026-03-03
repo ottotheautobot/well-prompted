@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Post, PostStatus } from '@/types';
 import NavBar from '@/components/NavBar';
 
@@ -302,13 +302,35 @@ interface PostCardProps {
 
 function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject, onRender, onVideoApprove, onPublishNow, onDelete, onGenerateAudio }: PostCardProps) {
   const al = actionLoading;
+  const [localPost, setLocalPost] = useState(post);
+  const [regen, setRegen] = useState<string | null>(null);
+
+  useEffect(() => { setLocalPost(post); }, [post]);
+
+  const handleRegen = async (section: string) => {
+    setRegen(section);
+    const res = await fetch('/api/regenerate-section', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: localPost.id, section }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (section === 'why')     setLocalPost(p => ({ ...p, good_output: JSON.stringify(data.data) }));
+      if (section === 'caption') setLocalPost(p => ({ ...p, caption_bad: data.data }));
+      if (section === 'prompts') setLocalPost(p => ({ ...p, bad_prompt: data.data.okayPrompt, good_prompt: data.data.wellPrompt }));
+    } else {
+      alert('Regen failed: ' + data.error);
+    }
+    setRegen(null);
+  };
 
   let audioData: { url?: string; totalSec?: number; script?: string } | null = null;
-  try { audioData = JSON.parse(post.caption_good || '{}'); } catch {}
+  try { audioData = JSON.parse(localPost.caption_good || '{}'); } catch {}
   const hasAudio = !!audioData?.url;
 
   let whyItems: { title: string; description: string }[] = [];
-  try { whyItems = JSON.parse(post.good_output || '[]'); } catch {}
+  try { whyItems = JSON.parse(localPost.good_output || '[]'); } catch {}
 
   return (
     <div style={{ background: '#0B1220', border: '1px solid #1A2540', borderRadius: 14, overflow: 'hidden' }}>
@@ -369,22 +391,28 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
         <div style={{ padding: '0 20px 24px', borderTop: '1px solid #1A2540' }}>
           <div style={{ marginTop: 20 }}>
 
-            {post.format === 'before_after' ? (
+            {localPost.format === 'before_after' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {/* Okay prompt */}
                 <div>
-                  <div style={sectionLabel('#FF2D78')}>Okay Prompt</div>
-                  <div style={promptBox('#FF2D7820', '#FF2D7840')}>{post.bad_prompt}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={sectionLabel('#FF2D78')}>Okay Prompt</div>
+                    <RegenButton label="Redo Prompts" loading={regen === 'prompts'} onClick={() => handleRegen('prompts')} />
+                  </div>
+                  <div style={promptBox('#FF2D7820', '#FF2D7840')}>{localPost.bad_prompt}</div>
                 </div>
                 {/* Well prompted */}
                 <div>
                   <div style={sectionLabel('#0085FF')}>Well Prompted</div>
-                  <div style={promptBox('#0085FF15', '#0085FF40')}>{post.good_prompt}</div>
+                  <div style={promptBox('#0085FF15', '#0085FF40')}>{localPost.good_prompt}</div>
                 </div>
                 {/* Why breakdown */}
                 {whyItems.length > 0 && (
                   <div>
-                    <div style={sectionLabel('#5A7090')}>Why This Works</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={sectionLabel('#5A7090')}>Why This Works</div>
+                      <RegenButton label="Redo Why" loading={regen === 'why'} onClick={() => handleRegen('why')} />
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {whyItems.map((item, i) => (
                         <div key={i} style={{ display: 'flex', gap: 12, background: '#080B14', border: '1px solid #1A2540', borderRadius: 10, padding: '12px 16px' }}>
@@ -401,20 +429,23 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
                   </div>
                 )}
                 {/* Caption */}
-                {post.caption_bad && (
+                {localPost.caption_bad && (
                   <div>
-                    <div style={sectionLabel('#5A7090')}>Caption</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={sectionLabel('#5A7090')}>Caption</div>
+                      <RegenButton label="Redo Caption" loading={regen === 'caption'} onClick={() => handleRegen('caption')} />
+                    </div>
                     <div style={{ background: '#080B14', border: '1px solid #1A2540', borderRadius: 10, padding: 16, fontSize: 12, color: '#8A9AB0', fontFamily: 'sans-serif', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                      {post.caption_bad}
+                      {localPost.caption_bad}
                     </div>
                   </div>
                 )}
               </div>
 
-            ) : post.format === 'tip_list' ? (
+            ) : localPost.format === 'tip_list' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={sectionLabel('#C084FC')}>{post.bad_prompt}</div>
-                {(() => { try { return JSON.parse(post.bad_output || '[]'); } catch { return []; } })().map((tip: string, i: number) => (
+                <div style={sectionLabel('#C084FC')}>{localPost.bad_prompt}</div>
+                {(() => { try { return JSON.parse(localPost.bad_output || '[]'); } catch { return []; } })().map((tip: string, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: 12, background: '#080B14', border: '1px solid #1A2540', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#C8D0E0', fontFamily: 'sans-serif' }}>
                     <span style={{ color: '#C084FC', fontWeight: 700, fontFamily: 'mono' }}>{i + 1}.</span> {tip}
                   </div>
@@ -423,8 +454,8 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
 
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {(() => { try { return JSON.parse(post.bad_output || '{}'); } catch { return null; } })() && (() => {
-                  const d = JSON.parse(post.bad_output || '{}');
+                {(() => { try { return JSON.parse(localPost.bad_output || '{}'); } catch { return null; } })() && (() => {
+                  const d = JSON.parse(localPost.bad_output || '{}');
                   return (
                     <>
                       <div style={{ background: '#1A0A0A', border: '1px solid #FF2D7840', borderRadius: 10, padding: 14 }}>
@@ -442,15 +473,15 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
             )}
 
             {/* Video preview */}
-            {((post as any).video_url || post.video_bad_url) && (
+            {((localPost as any).video_url || localPost.video_bad_url) && (
               <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #1A2540' }}>
                 <div style={sectionLabel('#5A7090')}>Video Preview</div>
-                <video src={(post as any).video_url || post.video_bad_url} controls style={{ maxWidth: 260, width: '100%', borderRadius: 10, border: '1px solid #1A2540' }} />
+                <video src={(localPost as any).video_url || localPost.video_bad_url} controls style={{ maxWidth: 260, width: '100%', borderRadius: 10, border: '1px solid #1A2540' }} />
               </div>
             )}
 
             {/* Audio section */}
-            {post.format === 'before_after' && (
+            {localPost.format === 'before_after' && (
               <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #1A2540', display: 'flex', alignItems: 'center', gap: 12 }}>
                 {hasAudio ? (
                   <>
@@ -526,6 +557,23 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
         </div>
       )}
     </div>
+  );
+}
+
+function RegenButton({ label, loading, onClick }: { label: string; loading: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      style={{
+        background: 'transparent', color: loading ? '#4A6080' : '#5A7090',
+        border: '1px solid #1A2540', padding: '3px 10px', borderRadius: 6,
+        fontSize: 11, fontFamily: 'sans-serif', cursor: loading ? 'default' : 'pointer',
+        display: 'flex', alignItems: 'center', gap: 4,
+      }}
+    >
+      {loading ? '⏳' : '↻'} {loading ? 'Regenerating...' : label}
+    </button>
   );
 }
 

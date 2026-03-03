@@ -354,8 +354,7 @@ CATEGORY TAGS: ${item.tags.join(' ')}
 Caption formula (follow exactly):
 Line 1: Hook — 5-8 words, calls out the mistake directly. Make it sting a little.
 Lines 2-3: 1-2 short punchy sentences on WHY the vague prompt fails. Be specific.
-Line 4: "Swipe for the prompt upgrade →"
-Line 5: Technique in caps + em dash + one line on what it does
+Line 4: Technique in caps + em dash + one line on what it does
 Blank line
 "—"
 "Follow @well.prompted for daily prompt upgrades."

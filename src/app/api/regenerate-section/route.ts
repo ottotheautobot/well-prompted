@@ -72,8 +72,7 @@ CATEGORY: ${category}
 Caption formula:
 Line 1: Hook — 5-8 words, calls out the mistake directly, make it sting
 Lines 2-3: 1-2 short punchy sentences on WHY the vague prompt fails
-Line 4: "Swipe for the prompt upgrade →"
-Line 5: Technique in caps + em dash + one line on what it does
+Line 3: Technique in caps + em dash + one line on what it does
 [blank line]
 —
 [blank line]

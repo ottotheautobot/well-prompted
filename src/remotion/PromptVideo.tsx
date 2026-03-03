@@ -210,7 +210,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         opacity: globalIn,
       }}>
-        <Img src={staticFile('logo.png')} style={{ height: 64, width: 64, objectFit: 'contain' }} />
+        <Img src={staticFile('logo.png')} style={{ height: 48, width: 'auto', objectFit: 'contain' }} />
         <span style={{ color: '#2C3D5C', fontSize: 14, fontWeight: 700, letterSpacing: 3, fontFamily: 'sans-serif' }}>
           {category.replace(/_/g,' ').toUpperCase()}
         </span>
@@ -382,14 +382,14 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         const bgAlpha = interpolate(frame, [OUTRO_START, OUTRO_START + Math.round(fps * 0.4)], [0, 1],
           { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-        // Logo size: starts matching header icon (64px), ends large (500px)
-        const LOGO_SIZE_START = 64;
-        const LOGO_SIZE_END   = 500;
-        const logoFont = LOGO_SIZE_START + (LOGO_SIZE_END - LOGO_SIZE_START) * t; // reused as size unit
+        // Logo width: starts matching header (~240px wide at 48px tall), ends large (900px)
+        const LOGO_W_START = 240;
+        const LOGO_W_END   = 900;
+        const logoFont = LOGO_W_START + (LOGO_W_END - LOGO_W_START) * t; // width unit
 
-        // Header logo center: x = MX + 32 (half of 64px icon), y = 16 + 32 = 48
-        const startX = MX + 32 - W / 2;
-        const startY = 48 - H / 2;
+        // Header logo center: x = MX + 120 (half of ~240px wide logo), y = 16 + 24 = 40
+        const startX = MX + 120 - W / 2;
+        const startY = 40 - H / 2;
         const tx = startX * (1 - t);
         const ty = startY * (1 - t);
 
@@ -411,11 +411,11 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
             }}>
               <Img
                 src={staticFile('logo.png')}
-                style={{ width: logoFont * 4, height: logoFont * 4, objectFit: 'contain' }}
+                style={{ width: logoFont, height: 'auto', objectFit: 'contain' }}
               />
               <div style={{
-                color: '#4A6080', fontSize: Math.round(logoFont * 0.28),
-                fontFamily: 'sans-serif', letterSpacing: 3, marginTop: 20,
+                color: '#4A6080', fontSize: Math.round(logoFont * 0.038),
+                fontFamily: 'sans-serif', letterSpacing: 3, marginTop: 24,
                 opacity: tagAlpha, fontWeight: 600,
               }}>
                 BETTER PROMPTS, BETTER RESULTS.

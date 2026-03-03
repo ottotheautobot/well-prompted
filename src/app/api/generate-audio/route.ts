@@ -43,6 +43,32 @@ function estimateSec(text: string, speed = SPEECH_SPEED) {
   return (text.trim().split(/\s+/).length / (150 * speed)) * 60;
 }
 
+// Mirror of PromptVideo.tsx timing logic — gives us target durations per page
+function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;description:string}[]) {
+  const TYPING_START_SEC = 1.2;
+  const typingSec        = Math.max(5, wellPrompt.length / 26);
+  const typingEndSec     = TYPING_START_SEC + typingSec;
+  const p1TotalSec       = typingEndSec + 5;           // typing + 5s hold
+
+  const itemCount        = whyBreakdown.length;
+  const whyAnimSec       = 0.3 + itemCount * 0.45;     // stagger animation
+  const p2TotalSec       = whyAnimSec + 8;             // animation + hold
+
+  // At speed 1.1, TTS runs at ~165 wpm = 2.75 words/sec
+  const WPS = 2.75;
+
+  // Section 1: fill from video start up to just before typing finishes
+  // (narration hooks the viewer, plays while typing animates)
+  const s1TargetSec   = Math.max(10, typingEndSec - 2);
+  const s1TargetWords = Math.round(s1TargetSec * WPS);
+
+  // Section 2: fill the why page (items animate + hold)
+  const s2TargetSec   = Math.max(10, p2TotalSec - 1);
+  const s2TargetWords = Math.round(s2TargetSec * WPS);
+
+  return { p1TotalSec, p2TotalSec, s1TargetWords, s2TargetWords, typingEndSec };
+}
+
 export async function POST(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: 'Missing post id' }, { status: 400 });
@@ -53,35 +79,40 @@ export async function POST(req: NextRequest) {
   let whyBreakdown: { title: string; description: string }[] = [];
   try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
 
+  // Calculate exact video timings so narration fits each page
+  const timings = calcVideoTimings(post.good_prompt, whyBreakdown);
+
   // Generate narration script
   const narrationRaw = await anthropic.messages.create({
     model: 'claude-haiku-4-5', max_tokens: 600,
     messages: [{
       role: 'user', content:
-`Write a voiceover narration script for a 30-second Instagram Reel about prompt engineering.
+`Write a voiceover narration script timed to a specific Instagram Reel.
 
 OKAY PROMPT: "${post.bad_prompt}"
 WELL PROMPTED: "${post.good_prompt}"
 WHY BREAKDOWN:
 ${whyBreakdown.map((w, i) => `${i + 1}. ${w.title} — ${w.description}`).join('\n')}
 
-The video has two pages:
-- Page 1: Okay prompt shown, then well prompted version types in (~10-12 seconds)
-- Page 2: "Why this works" breakdown appears item by item (~15-18 seconds)
+VIDEO TIMING:
+- Page 1 runs for ${timings.p1TotalSec.toFixed(1)} seconds total. The well prompted version finishes typing at ~${timings.typingEndSec.toFixed(1)}s.
+- Page 2 runs for ${timings.p2TotalSec.toFixed(1)} seconds. Why breakdown items appear one by one.
 
-SECTION 1 (30-38 words MAX, plays over page 1):
-- One sentence calling out what's wrong with the okay prompt. Make it sting slightly.
+SECTION 1 — EXACTLY ${timings.s1TargetWords} words (narration plays while page 1 is on screen):
+- Opens by calling out what's wrong with the okay prompt. One sentence, make it sting slightly.
 - "Here's the upgrade." as a natural pivot.
-- 1 sentence on what the well prompted version does differently — what it adds and why.
+- 1-2 sentences explaining what the well prompted version adds and why it works.
+- Must be EXACTLY ${timings.s1TargetWords} words — count carefully. At 1.1x speed this fills ~${timings.typingEndSec.toFixed(0)} seconds.
 
-SECTION 2 (40-52 words MAX, plays over page 2):
-- Natural bridge: "Here's why it works." or similar.
-- One short sentence per breakdown item. Punchy. No padding.
+SECTION 2 — EXACTLY ${timings.s2TargetWords} words (narration plays while page 2 is on screen):
+- Opens with a natural bridge: "Here's why it works." or similar.
+- Walk through each breakdown item in order. One punchy sentence per item.
+- Must be EXACTLY ${timings.s2TargetWords} words — count carefully. At 1.1x speed this fills ~${timings.p2TotalSec.toFixed(0)} seconds.
 
 Rules:
-- Warm but direct. Like a smart colleague explaining something useful.
-- No filler. No "in this video". No "make sure to follow".
-- Natural speech rhythm — fragments are fine.
+- Warm but direct. Smart colleague energy, not professor energy.
+- No filler. No "in this video". No exclamation points.
+- Natural rhythm — fragments are fine.
 
 Return JSON only:
 {"section1": "...", "section2": "..."}`
@@ -126,6 +157,9 @@ Return JSON only:
     url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3`,
     section1Sec: estimateSec(narration.section1),
     totalSec: estimateSec(fullScript),
+    // Video timing targets — used by calcVideoDuration floor
+    p1TotalSec: timings.p1TotalSec,
+    p2TotalSec: timings.p2TotalSec,
     script: narration,
     musicUrl: music.url,
     musicStartSec: music.startFrom,

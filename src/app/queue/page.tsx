@@ -397,7 +397,7 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={sectionLabel('#FF2D78')}>Okay Prompt</div>
-                    <RegenButton label="Redo Prompts" loading={regen === 'prompts'} onClick={() => handleRegen('prompts')} />
+                    <RegenButton label="Redo Well Prompted" loading={regen === 'prompts'} onClick={() => handleRegen('prompts')} />
                   </div>
                   <div style={promptBox('#FF2D7820', '#FF2D7840')}>{localPost.bad_prompt}</div>
                 </div>

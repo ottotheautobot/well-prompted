@@ -28,7 +28,6 @@ const BASE_URL = `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}`;
 const MUSIC_LIBRARY = [
   { id: 'track-01', url: `${BASE_URL}/music/track-01.wav`, name: 'In the Gloom'          },
   { id: 'track-03', url: `${BASE_URL}/music/track-03.wav`, name: 'Off-White'              },
-  { id: 'track-05', url: `${BASE_URL}/music/track-05.wav`, name: 'Strangers in Dub'      },
   { id: 'track-07', url: `${BASE_URL}/music/track-07.wav`, name: 'Butterfly'             },
   { id: 'track-08', url: `${BASE_URL}/music/track-08.wav`, name: 'Surrounded by Bubbles' },
 ].map(t => ({ ...t, startFrom: 0 }));

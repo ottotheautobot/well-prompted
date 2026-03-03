@@ -122,9 +122,9 @@ VIDEO STRUCTURE:
 The narration is ONE continuous script playing start to finish. It should naturally cover both pages — first explain the prompt upgrade, then walk the why breakdown. The transitions should feel like one flowing monologue, not two separate sections.
 
 SCRIPT — EXACTLY ${timings.totalTargetWords} words total (targeting ~${timings.totalVideoDurationSec - 3} seconds of speech):
-- Open by calling out what's wrong with the okay prompt (one sharp sentence)
-- "Here's the upgrade." — then briefly explain what the well prompted version does differently
-- Naturally pivot around the ${timings.p1TotalSec.toFixed(0)}s mark to "here's why it works" — the viewer will see the why page at this point
+- Open with ONE sharp sentence calling out what's wrong with the okay prompt. Vary the opening style — do NOT always start with "You're..." or always frame it as an upgrade. Mix it up: sometimes call out the mistake directly, sometimes ask a rhetorical question, sometimes just state what the prompt is missing.
+- Transition naturally into the better version — vary the pivot line too. Not always "Here's the upgrade." Try things like "This version is different.", "Watch what changes.", "Here's what actually works.", etc.
+- Naturally pivot around the ${timings.p1TotalSec.toFixed(0)}s mark to the why breakdown — the viewer will see the why page at this point
 - Walk the breakdown items in order, one punchy sentence each
 - End with EXACTLY this closing line (word-for-word, do not paraphrase): "${closer}"
 

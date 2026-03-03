@@ -46,7 +46,7 @@ function countLines(text: string, fontSize: number, boxW: number): number {
 
 // ── find the largest shared font where both cards fit in the available height ──
 function computeLayout(okay: string, well: string) {
-  const LABEL_H   = 44;   // each label row
+  const LABEL_H   = 54;   // each label row (bumped for larger heading text)
   const GAP       = 24;   // gap between cards
   const CARD_PAD  = 80;   // vertical padding inside each card (top+bottom)
   const LH        = 1.65;
@@ -168,7 +168,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   // Why section font sizes — dynamic based on item count + text length
   const WHY_AVAIL_H = H - LOGO_BOT - 56 - 20;
   const { titleSize: whyTitleSize, descSize: whyDescSize } = calcWhyFontSizes(whyBreakdown, WHY_AVAIL_H, CARD_W);
-  const LABEL_H  = 44;
+  const LABEL_H  = 54;
   const GAP      = 24;
   const okayLabelTop = LOGO_BOT;
   const okayCardTop  = okayLabelTop + LABEL_H;
@@ -225,8 +225,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           position: 'absolute', top: okayLabelTop, left: MX,
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <div style={{ width: 4, height: 20, borderRadius: 2, background: PINK }} />
-          <span style={{ color: PINK, fontSize: 14, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 28, borderRadius: 2, background: PINK }} />
+          <span style={{ color: PINK, fontSize: 21, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
             OKAY PROMPT
           </span>
         </div>
@@ -259,8 +259,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           position: 'absolute', top: wellLabelTop, left: MX,
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <div style={{ width: 4, height: 20, borderRadius: 2, background: BLUE }} />
-          <span style={{ color: BLUE, fontSize: 14, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 28, borderRadius: 2, background: BLUE }} />
+          <span style={{ color: BLUE, fontSize: 21, fontWeight: 800, letterSpacing: 5, fontFamily: 'sans-serif' }}>
             WELL PROMPTED
           </span>
         </div>
@@ -300,8 +300,8 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           position: 'absolute', top: LOGO_BOT, left: MX, right: MX,
           display: 'flex', alignItems: 'center', gap: 16,
         }}>
-          <div style={{ width: 4, height: 24, borderRadius: 2, background: BLUE }} />
-          <span style={{ color: '#2C3D5C', fontSize: 15, fontWeight: 800, letterSpacing: 4, fontFamily: 'sans-serif' }}>
+          <div style={{ width: 4, height: 32, borderRadius: 2, background: BLUE }} />
+          <span style={{ color: '#2C3D5C', fontSize: 22, fontWeight: 800, letterSpacing: 4, fontFamily: 'sans-serif' }}>
             WHY THIS WORKS
           </span>
           <div style={{ flex: 1, height: 1, background: '#1A2540' }} />

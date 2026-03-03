@@ -25,17 +25,15 @@ export async function POST(req: NextRequest) {
     try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
 
     let audioUrl: string | undefined;
-    let section1Sec: number | undefined;
     let totalAudioSec: number | undefined;
     let musicUrl: string | undefined;
     let musicStartSec: number | undefined;
     try {
       const audioData = JSON.parse(post.caption_good || '{}');
       if (audioData.url) {
-        audioUrl     = audioData.url;
-        section1Sec  = audioData.section1Sec;
+        audioUrl      = audioData.url;
         totalAudioSec = audioData.totalSec;
-        musicUrl     = audioData.musicUrl;
+        musicUrl      = audioData.musicUrl;
         musicStartSec = audioData.musicStartSec;
       }
     } catch {}
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
         whyBreakdown,
         category: post.category,
         postNumber: post.post_number || 1,
-        ...(audioUrl ? { audioUrl, section1Sec, totalAudioSec } : {}),
+        ...(audioUrl ? { audioUrl, totalAudioSec } : {}),
         ...(musicUrl ? { musicUrl, musicStartSec } : {}),
       },
       codec: 'h264',

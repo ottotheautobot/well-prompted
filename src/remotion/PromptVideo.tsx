@@ -18,7 +18,6 @@ interface PromptVideoProps {
   category: string;
   postNumber: number;
   audioUrl?: string;
-  section1Sec?: number;
   totalAudioSec?: number; // actual full narration duration — video must not end before this
   musicUrl?: string;
   musicStartSec?: number;
@@ -126,7 +125,7 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
 }
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({
-  okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, section1Sec, totalAudioSec,
+  okayPrompt, wellPrompt, whyBreakdown, category, audioUrl, totalAudioSec,
   musicUrl, musicStartSec = 0,
 }) => {
   const frame = useCurrentFrame();

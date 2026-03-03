@@ -43,30 +43,27 @@ function estimateSec(text: string, speed = SPEECH_SPEED) {
   return (text.trim().split(/\s+/).length / (150 * speed)) * 60;
 }
 
-// Mirror of PromptVideo.tsx timing logic — gives us target durations per page
+// Mirror of PromptVideo.tsx timing logic — returns full video duration
 function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;description:string}[]) {
+  const FPS              = 30;
+  const FADE_SEC         = Math.round(FPS * 0.45) / FPS;
   const TYPING_START_SEC = 1.2;
   const typingSec        = Math.max(5, wellPrompt.length / 26);
   const typingEndSec     = TYPING_START_SEC + typingSec;
   const p1TotalSec       = typingEndSec + 5;           // typing + 5s hold
 
   const itemCount        = whyBreakdown.length;
-  const whyAnimSec       = 0.3 + itemCount * 0.45;     // stagger animation
-  const p2TotalSec       = whyAnimSec + 8;             // animation + hold
+  const whyAnimSec       = 0.3 + itemCount * 0.45;
+  const p2TotalSec       = whyAnimSec + 3;             // animation + 3s hold
+  const p2StartSec       = p1TotalSec + FADE_SEC;
+
+  const totalVideoDurationSec = p2StartSec + p2TotalSec + FADE_SEC;
 
   // At speed 1.1, TTS runs at ~165 wpm = 2.75 words/sec
   const WPS = 2.75;
+  const totalTargetWords = Math.round((totalVideoDurationSec - 1) * WPS); // -1s buffer at end
 
-  // Section 1: fill from video start up to just before typing finishes
-  // (narration hooks the viewer, plays while typing animates)
-  const s1TargetSec   = Math.max(10, typingEndSec - 2);
-  const s1TargetWords = Math.round(s1TargetSec * WPS);
-
-  // Section 2: fill the why page (items animate + hold)
-  const s2TargetSec   = Math.max(10, p2TotalSec - 1);
-  const s2TargetWords = Math.round(s2TargetSec * WPS);
-
-  return { p1TotalSec, p2TotalSec, s1TargetWords, s2TargetWords, typingEndSec };
+  return { totalVideoDurationSec, totalTargetWords, p1TotalSec, p2StartSec, typingEndSec };
 }
 
 export async function POST(req: NextRequest) {
@@ -82,51 +79,50 @@ export async function POST(req: NextRequest) {
   // Calculate exact video timings so narration fits each page
   const timings = calcVideoTimings(post.good_prompt, whyBreakdown);
 
-  // Generate narration script
+  // Generate one continuous narration script timed to the full video
   const narrationRaw = await anthropic.messages.create({
     model: 'claude-haiku-4-5', max_tokens: 600,
     messages: [{
       role: 'user', content:
-`Write a voiceover narration script timed to a specific Instagram Reel.
+`Write a voiceover narration for a ${timings.totalVideoDurationSec.toFixed(0)}-second Instagram Reel about prompt engineering.
 
 OKAY PROMPT: "${post.bad_prompt}"
 WELL PROMPTED: "${post.good_prompt}"
 WHY BREAKDOWN:
 ${whyBreakdown.map((w, i) => `${i + 1}. ${w.title} — ${w.description}`).join('\n')}
 
-VIDEO TIMING:
-- Page 1 runs for ${timings.p1TotalSec.toFixed(1)} seconds total. The well prompted version finishes typing at ~${timings.typingEndSec.toFixed(1)}s.
-- Page 2 runs for ${timings.p2TotalSec.toFixed(1)} seconds. Why breakdown items appear one by one.
+VIDEO STRUCTURE:
+- 0 to ${timings.p1TotalSec.toFixed(0)}s → Page 1: okay prompt shown, then well prompted version types in (finishes at ~${timings.typingEndSec.toFixed(0)}s)
+- ${timings.p2StartSec.toFixed(0)}s onward → Page 2: why breakdown items appear one by one
 
-SECTION 1 — EXACTLY ${timings.s1TargetWords} words (narration plays while page 1 is on screen):
-- Opens by calling out what's wrong with the okay prompt. One sentence, make it sting slightly.
-- "Here's the upgrade." as a natural pivot.
-- 1-2 sentences explaining what the well prompted version adds and why it works.
-- Must be EXACTLY ${timings.s1TargetWords} words — count carefully. At 1.1x speed this fills ~${timings.typingEndSec.toFixed(0)} seconds.
+The narration is ONE continuous script playing start to finish. It should naturally cover both pages — first explain the prompt upgrade, then walk the why breakdown. The transitions should feel like one flowing monologue, not two separate sections.
 
-SECTION 2 — EXACTLY ${timings.s2TargetWords} words (narration plays while page 2 is on screen):
-- Opens with a natural bridge: "Here's why it works." or similar.
-- Walk through each breakdown item in order. One punchy sentence per item.
-- Must be EXACTLY ${timings.s2TargetWords} words — count carefully. At 1.1x speed this fills ~${timings.p2TotalSec.toFixed(0)} seconds.
+SCRIPT — EXACTLY ${timings.totalTargetWords} words total:
+- Open by calling out what's wrong with the okay prompt (one sharp sentence)
+- "Here's the upgrade." — then briefly explain what the well prompted version does differently
+- Naturally pivot around the ${timings.p1TotalSec.toFixed(0)}s mark to "here's why it works" — the viewer will see the why page at this point
+- Walk the breakdown items in order, one punchy sentence each
+- End cleanly, no CTA, no filler
 
 Rules:
-- Warm but direct. Smart colleague energy, not professor energy.
-- No filler. No "in this video". No exclamation points.
-- Natural rhythm — fragments are fine.
+- Warm but direct. Smart colleague, not professor.
+- No "in this video", no exclamation points, no padding.
+- Fragments are fine. Rhythm matters.
+- Count words carefully — EXACTLY ${timings.totalTargetWords} words.
 
 Return JSON only:
-{"section1": "...", "section2": "..."}`
+{"script": "..."}`
     }],
   });
 
   const raw = narrationRaw.content[0].type === 'text' ? narrationRaw.content[0].text : '';
-  let narration = { section1: '', section2: '' };
+  let narration = { script: '' };
   try {
     const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
     narration = JSON.parse(raw.slice(s, e + 1));
   } catch { return NextResponse.json({ error: 'Failed to parse narration script' }, { status: 500 }); }
 
-  const fullScript = [narration.section1, narration.section2].filter(Boolean).join(' ');
+  const fullScript = narration.script;
 
   // ElevenLabs TTS
   const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE}`, {
@@ -155,12 +151,9 @@ Return JSON only:
   const music = pickMusic(id);
   const audioData = {
     url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3`,
-    section1Sec: estimateSec(narration.section1),
     totalSec: estimateSec(fullScript),
-    // Video timing targets — used by calcVideoDuration floor
-    p1TotalSec: timings.p1TotalSec,
-    p2TotalSec: timings.p2TotalSec,
-    script: narration,
+    totalVideoDurationSec: timings.totalVideoDurationSec,
+    script: narration.script,
     musicUrl: music.url,
     musicStartSec: music.startFrom,
     musicName: music.name,

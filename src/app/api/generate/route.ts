@@ -282,26 +282,21 @@ Return ONLY the prompt text, nothing else.`, 400);
 
     // === STAGE 2: Generate "why this works" breakdown ===
     const whyRaw = await callClaude(
-      `You explain prompt improvements for educational Instagram content.
+      `You're explaining to a smart person why one prompt works better than another. Sound like a real person — direct, a little sharp, no corporate jargon.
 
 OKAY PROMPT: "${item.okay_prompt}"
 WELL PROMPTED: "${wellPromptRaw}"
 TECHNIQUE: ${item.technique}
 
-Write 3-5 breakdown items explaining EXACTLY what changed and why it matters.
-Each item: a short punchy title (3-5 words) + one sentence explanation.
+Write 4-5 breakdown items. Each needs:
+- TITLE: 4-7 words, plain English, active voice. Sounds like something you'd actually say out loud. NOT "Leverages Contextual Specificity" — YES "Naming the person changes everything"
+- DESCRIPTION: 1-2 sentences. Explain the actual mechanism — why does this specific change make the AI respond better? Be concrete. No filler.
 
-Rules:
-- Be specific — explain the REASON, not just what changed
-- Talk like a smart peer, not a professor
-- No jargon, no "leverage synergies"
-- Titles should be bold claims, not labels ("Business case beats tenure" not "Added context")
+Avoid: nominalizations, passive voice, buzzwords like leverages / facilitates / enables / anchors / reframes / optimizes
+Write like you're explaining it to a colleague over lunch, not in a performance review.
 
 Return JSON only:
-[
-  {"title": "...", "description": "..."},
-  {"title": "...", "description": "..."}
-]`, 500);
+[{"title":"...","description":"..."},...]`, 500);
 
     const whyBreakdown = JSON.parse(whyRaw.slice(whyRaw.indexOf('['), whyRaw.lastIndexOf(']') + 1));
 

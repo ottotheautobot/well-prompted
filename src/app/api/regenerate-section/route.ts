@@ -26,18 +26,19 @@ export async function POST(req: NextRequest) {
   // ── WHY BREAKDOWN ──────────────────────────────────────────
   if (section === 'why') {
     const raw = await ask(
-      `You are a prompt engineering expert. Given a before/after prompt example, write a "Why This Works" breakdown explaining the key improvements.
+      `You're explaining to a smart person why one prompt works better than another. Sound like a real person — direct, a little sharp, no corporate jargon.
 
 OKAY PROMPT: "${post.bad_prompt}"
 WELL PROMPTED: "${post.good_prompt}"
 
-Write exactly 4-5 breakdown items. Each item must:
-- Have a SHORT, punchy TITLE (4-7 words, active voice, no filler)
-- Have a DESCRIPTION (1-2 sentences, specific, explains the mechanism — not just restating the title)
+Write 4-5 breakdown items. Each needs:
+- TITLE: 4-7 words, plain English, active voice. No buzzwords. Sounds like something you'd actually say out loud. NOT "Leverages Contextual Specificity" — YES "Naming the person changes everything"
+- DESCRIPTION: 1-2 sentences. Explain the actual mechanism — why does this specific change make the AI respond better? Be concrete. No filler.
 
-Think about: what specific elements were added? What context was provided? What constraints were set? What tone/format was specified?
+Avoid: nominalizations, passive voice, words like "leverages / facilitates / enables / anchors / reframes / optimizes"
+Write like you're explaining it to a colleague over lunch, not in a performance review.
 
-Return JSON array only — no other text:
+Return JSON array only:
 [{"title":"...","description":"..."},...]`, 700
     );
     let why: { title: string; description: string }[] = [];

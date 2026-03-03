@@ -122,7 +122,8 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
     ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 4)
     : 0;
 
-  return Math.max(computed, audioFloor);
+  const MIN_FRAMES = fps * 30; // 30 second minimum
+  return Math.max(computed, audioFloor, MIN_FRAMES);
 }
 
 export const PromptVideo: React.FC<PromptVideoProps> = ({

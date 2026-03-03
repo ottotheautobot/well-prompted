@@ -63,7 +63,8 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
   const p2TotalSec       = whyAnimSec + 8;             // animation + 8s reading hold
   const p2StartSec       = p1TotalSec + FADE_SEC;
 
-  const totalVideoDurationSec = p2StartSec + p2TotalSec + FADE_SEC;
+  const MIN_VIDEO_SEC = 30;
+  const totalVideoDurationSec = Math.max(MIN_VIDEO_SEC, p2StartSec + p2TotalSec + FADE_SEC);
 
   // Calibrated from measurements: ~2.5 wps on average (varies by sentence style)
   // Target audio to fill the full video, minus a 2s grace buffer at the end

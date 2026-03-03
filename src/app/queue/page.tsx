@@ -136,7 +136,12 @@ export default function QueuePage() {
     const data = await res.json();
     if (data.done) {
       setRenderProgress(p => { const n = { ...p }; delete n[id]; return n; });
-      await fetchPosts();
+      // Update the post directly in state — no full reload, no flash
+      setPosts(prev => prev.map(p =>
+        p.id === id
+          ? { ...p, status: 'pending_video_review' as PostStatus, video_bad_url: data.video_url, render_status: 'done' }
+          : p
+      ));
     } else if (!data.error) {
       setRenderProgress(p => ({ ...p, [id]: data.progress ?? 0 }));
       setTimeout(() => pollRenderStatus(id, render_id, bucket), 5000);

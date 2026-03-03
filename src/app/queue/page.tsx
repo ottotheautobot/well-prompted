@@ -493,7 +493,7 @@ function PostCard({ post, expanded, onToggle, actionLoading, onApprove, onReject
                     <>
                       <span style={{ fontSize: 11, color: '#34D399', fontWeight: 700, fontFamily: 'sans-serif' }}>🎙 Audio Ready</span>
                       <span style={{ fontSize: 11, color: '#4A6080' }}>~{Math.round(audioData!.totalSec || 0)}s</span>
-                      <audio src={audioData!.url} controls style={{ height: 28, flex: 1 }} />
+                      <audio key={audioData!.url} src={audioData!.url} controls style={{ height: 28, flex: 1 }} />
                     </>
                   ) : (
                     <span style={{ fontSize: 11, color: '#4A6080', fontFamily: 'sans-serif' }}>No audio yet</span>

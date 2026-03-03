@@ -87,6 +87,21 @@ export async function POST(req: NextRequest) {
   // Calculate exact video timings so narration fits each page
   const timings = calcVideoTimings(post.good_prompt, whyBreakdown);
 
+  // Rotating closers — deterministic by post ID so same post always gets same one
+  const CLOSERS = [
+    'Try it tonight.',
+    'Save this one.',
+    'Your turn.',
+    'Go try it.',
+    'Now you know.',
+    'Use this next time.',
+    'That is the upgrade.',
+    'Worth saving this.',
+    'Simple fix. Big difference.',
+    'Start here.',
+  ];
+  const closer = CLOSERS[id.charCodeAt(0) % CLOSERS.length];
+
   // Generate one continuous narration script timed to the full video
   const narrationRaw = await anthropic.messages.create({
     model: 'claude-haiku-4-5', max_tokens: 600,
@@ -110,7 +125,7 @@ SCRIPT — EXACTLY ${timings.totalTargetWords} words total:
 - "Here's the upgrade." — then briefly explain what the well prompted version does differently
 - Naturally pivot around the ${timings.p1TotalSec.toFixed(0)}s mark to "here's why it works" — the viewer will see the why page at this point
 - Walk the breakdown items in order, one punchy sentence each
-- End cleanly, no CTA, no filler
+- End with EXACTLY this closing line (word-for-word, do not paraphrase): "${closer}"
 
 Rules:
 - Warm but direct. Smart colleague, not professor.

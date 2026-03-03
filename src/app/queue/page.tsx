@@ -76,6 +76,15 @@ export default function QueuePage() {
 
   useEffect(() => { fetchPosts(); }, []);
 
+  // While any post is rendering, silently refresh every 5s to pick up status changes
+  useEffect(() => {
+    const hasRendering = posts.some(p => p.status === 'rendering');
+    if (!hasRendering) return;
+    const t = setInterval(() => fetchPosts(true), 5000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts]);
+
   // On load: server resolves any stuck renders, then re-fetch + resume client polling
   useEffect(() => {
     const resume = async () => {

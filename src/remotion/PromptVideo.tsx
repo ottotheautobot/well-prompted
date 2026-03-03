@@ -118,7 +118,7 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
 
   // Hard floor: video must outlast the full narration + 2s buffer
   const audioFloor = props.totalAudioSec
-    ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 2)
+    ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 3)
     : 0;
 
   return Math.max(computed, audioFloor);

@@ -43,6 +43,11 @@ function estimateSec(text: string, speed = SPEECH_SPEED) {
   return (text.trim().split(/\s+/).length / (150 * speed)) * 60;
 }
 
+// Get actual duration from MP3 buffer — ElevenLabs outputs 128kbps CBR MP3
+function mp3DurationSec(buf: Buffer): number {
+  return buf.length / 16000; // 128kbps = 16000 bytes/sec
+}
+
 // Mirror of PromptVideo.tsx timing logic — returns full video duration
 function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;description:string}[]) {
   const FPS              = 30;
@@ -148,10 +153,11 @@ Return JSON only:
     Body: buf, ContentType: 'audio/mpeg',
   }));
 
+  const actualDurationSec = mp3DurationSec(buf);
   const music = pickMusic(id);
   const audioData = {
     url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3`,
-    totalSec: estimateSec(fullScript),
+    totalSec: actualDurationSec,  // actual duration from buffer, not word-count estimate
     totalVideoDurationSec: timings.totalVideoDurationSec,
     script: narration.script,
     musicUrl: music.url,

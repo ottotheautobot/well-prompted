@@ -117,8 +117,9 @@ export function calcVideoDuration(props: PromptVideoProps, fps = 30): number {
   const computed = p1End + FADE + whyAnimDur + HOLD_END + FADE;
 
   // Hard floor: video must outlast the full narration + 2s buffer
+  // +4s floor: 2.8s for outro + 1.2s breathing room
   const audioFloor = props.totalAudioSec
-    ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 3)
+    ? Math.round(props.totalAudioSec * fps) + Math.round(fps * 4)
     : 0;
 
   return Math.max(computed, audioFloor);
@@ -366,6 +367,67 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           })}
         </div>
       </div>
+
+      {/* ══════════ OUTRO — logo zooms from top-left to center ══════════ */}
+      {(() => {
+        const OUTRO_DUR   = Math.round(fps * 2.8);
+        const OUTRO_START = durationInFrames - OUTRO_DUR;
+        if (frame < OUTRO_START) return null;
+
+        // 0 → 1 over the full outro, eased
+        const t = interpolate(
+          frame, [OUTRO_START, durationInFrames - Math.round(fps * 0.2)], [0, 1],
+          { extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+            easing: Easing.bezier(0.22, 1, 0.36, 1) },
+        );
+
+        // Fade-in for dark bg overlay
+        const bgAlpha = interpolate(frame, [OUTRO_START, OUTRO_START + Math.round(fps * 0.4)], [0, 1],
+          { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+
+        // Logo font size: starts matching header (30px), ends large (120px)
+        const LOGO_FONT_START = 30;
+        const LOGO_FONT_END   = 120;
+        const logoFont = LOGO_FONT_START + (LOGO_FONT_END - LOGO_FONT_START) * t;
+
+        // Header logo center position (approx): x = MX + ~120px (half word width), y = 22 + 28 = 50
+        // We translate the centered element to start at that position then slide to (0,0)
+        const startX = MX + 110 - W / 2;  // offset from screen-center to header-logo-center
+        const startY = 50 - H / 2;
+        const tx = startX * (1 - t);
+        const ty = startY * (1 - t);
+
+        // Tagline fades in late
+        const tagAlpha = interpolate(frame,
+          [OUTRO_START + Math.round(fps * 1.6), OUTRO_START + Math.round(fps * 2.2)], [0, 1],
+          { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+
+        return (
+          <div style={{ position: 'absolute', inset: 0 }}>
+            {/* Dark overlay */}
+            <div style={{ position: 'absolute', inset: 0, background: BG, opacity: bgAlpha }} />
+            {/* Logo */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              transform: `translate(${tx}px, ${ty}px)`,
+            }}>
+              <div>
+                <span style={{ color: '#FFF', fontWeight: 800, fontSize: logoFont, fontFamily: 'sans-serif', lineHeight: 1 }}>well</span>
+                <span style={{ color: BLUE,  fontWeight: 800, fontSize: logoFont, fontFamily: 'sans-serif', lineHeight: 1 }}>.prompted</span>
+              </div>
+              <div style={{
+                color: '#4A6080', fontSize: Math.round(logoFont * 0.28),
+                fontFamily: 'sans-serif', letterSpacing: 3, marginTop: 14,
+                opacity: tagAlpha, fontWeight: 600,
+              }}>
+                BETTER PROMPTS, BETTER RESULTS.
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </AbsoluteFill>
   );

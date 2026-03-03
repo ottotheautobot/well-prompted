@@ -14,14 +14,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  // Video approve → scheduled. Video reject → back to approved so they can re-render.
-  const status = action === 'approve' ? 'scheduled' : 'approved';
-
+  // Video approve → pending_schedule (user places it on calendar). Video reject → back to approved.
+  const status = action === 'approve' ? 'pending_schedule' : 'approved';
   const updates: Record<string, unknown> = { status };
-  if (action === 'approve') {
-    const scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    updates.scheduled_at = scheduledAt;
-  }
   if (action === 'reject') {
     // Clear video so Render button reappears
     updates.video_bad_url = null;
@@ -39,18 +34,6 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   logFire('approve', 'info', `Video ${action}d — post → ${status}`, { postId: id });
-
-  if (action === 'approve' && process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-    await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID,
-        parse_mode: 'HTML',
-        text: `📅 <b>Post scheduled!</b>\n\nCategory: ${data.category}\nScheduled for: ${new Date(data.scheduled_at).toLocaleString('en-US', { timeZone: 'America/New_York' })} ET`,
-      }),
-    });
-  }
 
   return NextResponse.json(data);
 }

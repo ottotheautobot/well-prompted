@@ -9,6 +9,7 @@ const STATUS_COLORS: Record<string, string> = {
   approved:            'bg-emerald-900/50 text-emerald-400 border-emerald-800',
   rendering:           'bg-blue-900/50 text-blue-400 border-blue-800',
   pending_video_review:'bg-purple-900/50 text-purple-400 border-purple-800',
+  pending_schedule:    'bg-orange-900/50 text-orange-400 border-orange-800',
   scheduled:           'bg-cyan-900/50 text-cyan-400 border-cyan-800',
   rejected:            'bg-red-900/50 text-red-400 border-red-800',
 };
@@ -17,10 +18,11 @@ const STATUS_LABELS: Record<string, string> = {
   approved:             'Approved',
   rendering:            'Rendering',
   pending_video_review: 'Video Review',
+  pending_schedule:     'Ready to Schedule',
   scheduled:            'Scheduled',
   rejected:             'Rejected',
 };
-const QUEUE_STATUSES = ['pending_review','approved','rendering','pending_video_review','scheduled','rejected'];
+const QUEUE_STATUSES = ['pending_review','approved','rendering','pending_video_review','pending_schedule','scheduled','rejected'];
 
 const CATEGORY_META: Record<string, { label: string; color: string; bg: string; border: string }> = {
   career:        { label: 'Career',        color: '#60A5FA', bg: '#1E3A5F', border: '#2563EB40' },

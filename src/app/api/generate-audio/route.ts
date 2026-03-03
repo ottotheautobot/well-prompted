@@ -64,9 +64,10 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
 
   const totalVideoDurationSec = p2StartSec + p2TotalSec + FADE_SEC;
 
-  // Measured from actual ElevenLabs output: this voice at speed 1.1 runs ~120 wpm = 2.0 words/sec
-  const WPS = 2.0;
-  const totalTargetWords = Math.round((totalVideoDurationSec - 2) * WPS); // -2s buffer at end
+  // Calibrated from measurements: ~2.5 wps on average (varies by sentence style)
+  // Target audio to fill the full video, minus a 2s grace buffer at the end
+  const WPS = 2.5;
+  const totalTargetWords = Math.round((totalVideoDurationSec - 2) * WPS);
 
   return { totalVideoDurationSec, totalTargetWords, p1TotalSec, p2StartSec, typingEndSec };
 }
@@ -114,6 +115,7 @@ Rules:
 - No "in this video", no exclamation points, no padding.
 - Fragments are fine. Rhythm matters.
 - Word count is critical. Write the script, then count every word, then trim or expand to hit EXACTLY ${timings.totalTargetWords} words before returning.
+- Avoid "First," "Second," "Third," numbered starters, and em-dashes (—) — they create unnatural TTS pauses and eat time.
 
 Return JSON only:
 {"script": "...", "wordCount": <number>}`

@@ -13,13 +13,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  const status = action === 'approve' ? 'scheduled' : 'rejected';
+  // Video approve → scheduled. Video reject → back to approved so they can re-render.
+  const status = action === 'approve' ? 'scheduled' : 'approved';
 
-  // If approving, schedule for next available slot (default: 1 hour from now)
   const updates: Record<string, unknown> = { status };
   if (action === 'approve') {
     const scheduledAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     updates.scheduled_at = scheduledAt;
+  }
+  if (action === 'reject') {
+    // Clear video so Render button reappears
+    updates.video_bad_url = null;
+    updates.render_status = null;
+    updates.render_ids = null;
   }
 
   const { data, error } = await supabase

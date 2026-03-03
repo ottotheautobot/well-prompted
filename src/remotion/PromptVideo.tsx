@@ -1,5 +1,5 @@
 import {
-  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Audio,
+  AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Audio, Img, staticFile,
 } from 'remotion';
 
 // 1080 × 1920  |  9:16 Reel  |  2 pages:
@@ -206,14 +206,11 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
       {/* Logo */}
       <div style={{
-        position: 'absolute', top: 22, left: MX, right: MX, height: 56,
+        position: 'absolute', top: 16, left: MX, right: MX, height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         opacity: globalIn,
       }}>
-        <div>
-          <span style={{ color: '#FFF', fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>well</span>
-          <span style={{ color: BLUE,  fontWeight: 800, fontSize: 30, fontFamily: 'sans-serif' }}>.prompted</span>
-        </div>
+        <Img src={staticFile('logo.png')} style={{ height: 64, width: 64, objectFit: 'contain' }} />
         <span style={{ color: '#2C3D5C', fontSize: 14, fontWeight: 700, letterSpacing: 3, fontFamily: 'sans-serif' }}>
           {category.replace(/_/g,' ').toUpperCase()}
         </span>
@@ -385,15 +382,14 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
         const bgAlpha = interpolate(frame, [OUTRO_START, OUTRO_START + Math.round(fps * 0.4)], [0, 1],
           { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
 
-        // Logo font size: starts matching header (30px), ends large (120px)
-        const LOGO_FONT_START = 30;
-        const LOGO_FONT_END   = 120;
-        const logoFont = LOGO_FONT_START + (LOGO_FONT_END - LOGO_FONT_START) * t;
+        // Logo size: starts matching header icon (64px), ends large (500px)
+        const LOGO_SIZE_START = 64;
+        const LOGO_SIZE_END   = 500;
+        const logoFont = LOGO_SIZE_START + (LOGO_SIZE_END - LOGO_SIZE_START) * t; // reused as size unit
 
-        // Header logo center position (approx): x = MX + ~120px (half word width), y = 22 + 28 = 50
-        // We translate the centered element to start at that position then slide to (0,0)
-        const startX = MX + 110 - W / 2;  // offset from screen-center to header-logo-center
-        const startY = 50 - H / 2;
+        // Header logo center: x = MX + 32 (half of 64px icon), y = 16 + 32 = 48
+        const startX = MX + 32 - W / 2;
+        const startY = 48 - H / 2;
         const tx = startX * (1 - t);
         const ty = startY * (1 - t);
 
@@ -413,13 +409,13 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
               alignItems: 'center', justifyContent: 'center',
               transform: `translate(${tx}px, ${ty}px)`,
             }}>
-              <div>
-                <span style={{ color: '#FFF', fontWeight: 800, fontSize: logoFont, fontFamily: 'sans-serif', lineHeight: 1 }}>well</span>
-                <span style={{ color: BLUE,  fontWeight: 800, fontSize: logoFont, fontFamily: 'sans-serif', lineHeight: 1 }}>.prompted</span>
-              </div>
+              <Img
+                src={staticFile('logo.png')}
+                style={{ width: logoFont * 4, height: logoFont * 4, objectFit: 'contain' }}
+              />
               <div style={{
                 color: '#4A6080', fontSize: Math.round(logoFont * 0.28),
-                fontFamily: 'sans-serif', letterSpacing: 3, marginTop: 14,
+                fontFamily: 'sans-serif', letterSpacing: 3, marginTop: 20,
                 opacity: tagAlpha, fontWeight: 600,
               }}>
                 BETTER PROMPTS, BETTER RESULTS.

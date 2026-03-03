@@ -42,11 +42,13 @@ export async function POST(req: NextRequest) {
     logFire('publish', 'info', `Publishing started`, { postId: id, prompt: post.bad_prompt?.slice(0, 60) });
     await supabase.from('posts').update({ status: 'publishing' }).eq('id', id);
 
+    // thumb_offset at ~15s (15000ms) to capture the "Why This Works" page
     const res = await igPost(`${IG_ACCT}/media`, {
       media_type: 'REELS',
       video_url: videoUrl,
       caption: post.caption_bad || '',
       share_to_feed: 'true',
+      thumb_offset: '15000',
     });
 
     if (!res.id) {

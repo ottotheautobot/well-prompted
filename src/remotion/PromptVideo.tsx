@@ -46,12 +46,13 @@ function countLines(text: string, fontSize: number, boxW: number): number {
 
 // ── find the largest shared font where both cards fit in the available height ──
 function computeLayout(okay: string, well: string) {
-  const LABEL_H   = 54;   // each label row (bumped for larger heading text)
-  const GAP       = 24;   // gap between cards
-  const CARD_PAD  = 80;   // vertical padding inside each card (top+bottom)
-  const LH        = 1.65;
-  const LOGO_BOT  = 96;   // below logo
-  const AVAIL     = H - LOGO_BOT - 20; // 1804px total
+  const LABEL_H     = 54;   // each label row
+  const GAP         = 24;   // gap between cards
+  const CARD_PAD    = 80;   // vertical padding inside each card (top+bottom)
+  const LH          = 1.65;
+  const LOGO_BOT    = 96;   // below logo
+  const BOTTOM_SAFE = 240;  // Instagram UI overlay (comment bar + icons)
+  const AVAIL       = H - LOGO_BOT - BOTTOM_SAFE;
   const CARDS_AVAIL = AVAIL - LABEL_H * 2 - GAP - 32; // for both cards combined
 
   for (let fs = 68; fs >= 36; fs--) {
@@ -165,8 +166,10 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
   const LOGO_BOT = 96;
 
+  const BOTTOM_SAFE = 240;
+
   // Why section font sizes — dynamic based on item count + text length
-  const WHY_AVAIL_H = H - LOGO_BOT - 56 - 20;
+  const WHY_AVAIL_H = H - LOGO_BOT - 56 - BOTTOM_SAFE;
   const { titleSize: whyTitleSize, descSize: whyDescSize } = calcWhyFontSizes(whyBreakdown, WHY_AVAIL_H, CARD_W);
   const LABEL_H  = 54;
   const GAP      = 24;

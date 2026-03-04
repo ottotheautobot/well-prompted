@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const IG_API      = 'https://graph.instagram.com/v19.0';
+const IG_API      = 'https://graph.facebook.com/v19.0';
 const IG_TOKEN    = process.env.INSTAGRAM_ACCESS_TOKEN!;
 const IG_ACCT     = process.env.INSTAGRAM_ACCOUNT_ID!;
 

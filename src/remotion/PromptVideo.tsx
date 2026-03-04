@@ -34,7 +34,7 @@ const CARD_W = W - MX * 2; // 904px
 // ── count wrapped lines for a given font size & box width ──
 function countLines(text: string, fontSize: number, boxW: number): number {
   const usableW = boxW - 88;
-  const cpl = usableW / (fontSize * 0.56);
+  const cpl = usableW / (fontSize * 0.65);
   const words = text.split(' ');
   let lines = 1, lc = 0;
   for (const w of words) {
@@ -78,21 +78,26 @@ function computeLayout(okay: string, well: string) {
 function calcWhyFontSizes(items: WhyItem[], availH: number, cardW: number) {
   const NUM_W      = 90;   // number circle (66px) + gap
   const CARD_PAD_H = 80;   // horizontal padding inside card
-  const CARD_PAD_V = 72;   // vertical padding inside card (top+bottom)
-  const T_DESC_GAP = 10;   // gap between title and description
+  const CARD_PAD_V = 16;   // vertical padding inside card (top+bottom)
+  const ITEM_GAP   = 12;   // gap between cards in flex container
+  const T_DESC_GAP = 8;    // gap between title and description
   const textW = cardW - CARD_PAD_H - NUM_W;
-  const perItemH = availH / items.length;
+  const totalGap = ITEM_GAP * (items.length - 1);
+  const perItemH = (availH - totalGap) / items.length;
   const textAreaH = perItemH - CARD_PAD_V;
 
-  for (let ts = 46; ts >= 18; ts--) {
-    const ds = Math.round(ts * 0.87);
-    const maxTLines = Math.max(...items.map(it => countLines(it.title, ts, textW)));
-    const maxDLines = Math.max(...items.map(it => countLines(it.description, ds, textW)));
-    const titleH = maxTLines * ts * 1.25;
-    const descH  = maxDLines * ds * 1.5;
-    if (titleH + descH + T_DESC_GAP <= textAreaH) return { titleSize: ts, descSize: ds };
+  // Find the largest font where every item genuinely fits — no line count cap
+  for (let ts = 72; ts >= 28; ts--) {
+    const ds = Math.round(ts * 0.75);
+    const fits = items.every(it => {
+      // pass textW + 88 so countLines' internal -88 yields the true text width
+      const tLines = countLines(it.title, ts, textW + 88);
+      const dLines = countLines(it.description, ds, textW + 88);
+      return (tLines * ts * 1.2) + (dLines * ds * 1.4) + T_DESC_GAP <= textAreaH;
+    });
+    if (fits) return { titleSize: ts, descSize: ds };
   }
-  return { titleSize: 18, descSize: 16 };
+  return { titleSize: 28, descSize: 21 };
 }
 
 // cross-fade for page transitions
@@ -166,7 +171,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
   const LOGO_BOT = 245;
 
-  const BOTTOM_SAFE = 240;
+  const BOTTOM_SAFE = 400;
 
   // Why section font sizes — dynamic based on item count + text length
   const WHY_AVAIL_H = H - LOGO_BOT - 56 - BOTTOM_SAFE;
@@ -318,7 +323,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
           bottom: BOTTOM_SAFE,
           display: 'flex', flexDirection: 'column',
           justifyContent: 'flex-start',
-          gap: 20,
+          gap: 12,
         }}>
           {whyBreakdown.map((item, i) => {
             const iStart = P2_START + Math.round(fps * 0.3) + i * ITEM_DELAY;
@@ -331,13 +336,16 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
             return (
               <div key={i} style={{
-                display: 'flex', gap: 24, alignItems: 'flex-start',
+                display: 'flex', gap: 24, alignItems: 'center',
                 opacity: iOp, transform: `translateY(${iY}px)`,
                 background: '#0B1220',
                 border: `1px solid #1A2540`,
                 borderLeft: `4px solid ${BLUE}50`,
                 borderRadius: 18,
-                padding: '24px 32px',
+                padding: '8px 28px',
+                flex: 1,
+                overflow: 'hidden',
+                minHeight: 0,
               }}>
                 {/* Number */}
                 <div style={{

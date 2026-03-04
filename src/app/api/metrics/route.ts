@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const postId = req.nextUrl.searchParams.get('postId');
   if (!postId) return NextResponse.json({ error: 'Missing postId' }, { status: 400 });
 
-  const { data: post } = await supabase.from('posts').select('instagram_media_id,video_url,category,bad_prompt,published_at').eq('id', postId).single();
+  const { data: post } = await supabase.from('posts').select('instagram_media_id,category,bad_prompt,published_at').eq('id', postId).single();
   if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
 
   const mediaId = post.instagram_media_id;

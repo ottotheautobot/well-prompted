@@ -26,10 +26,10 @@ interface PromptVideoProps {
 const BLUE  = '#0085FF';
 const PINK  = '#FF2D78';
 const BG    = '#080B14';
-const MX    = 44;
+const MX    = 64;
 const W     = 1080;
 const H     = 1920;
-const CARD_W = W - MX * 2; // 992px
+const CARD_W = W - MX * 2; // 952px
 
 // ── count wrapped lines for a given font size & box width ──
 function countLines(text: string, fontSize: number, boxW: number): number {
@@ -50,7 +50,7 @@ function computeLayout(okay: string, well: string) {
   const GAP         = 24;   // gap between cards
   const CARD_PAD    = 80;   // vertical padding inside each card (top+bottom)
   const LH          = 1.65;
-  const LOGO_BOT    = 96;   // below logo
+  const LOGO_BOT    = 120;  // below logo
   const BOTTOM_SAFE = 240;  // Instagram UI overlay (comment bar + icons)
   const AVAIL       = H - LOGO_BOT - BOTTOM_SAFE;
   const CARDS_AVAIL = AVAIL - LABEL_H * 2 - GAP - 32; // for both cards combined
@@ -164,7 +164,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
   // Layout computed once
   const { fontSize, hOkay, hWell } = computeLayout(okayPrompt, wellPrompt);
 
-  const LOGO_BOT = 96;
+  const LOGO_BOT = 120;
 
   const BOTTOM_SAFE = 240;
 
@@ -210,7 +210,7 @@ export const PromptVideo: React.FC<PromptVideoProps> = ({
 
       {/* Logo */}
       <div style={{
-        position: 'absolute', top: 16, left: MX, right: MX, height: 64,
+        position: 'absolute', top: 40, left: MX, right: MX, height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         opacity: globalIn,
       }}>

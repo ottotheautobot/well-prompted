@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allen & Liya — By the Numbers</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --blue: #0085FF;
+    --pink: #FF2D78;
+    --bg: #080B14;
+    --card: #0E1220;
+    --card2: #131829;
+    --border: rgba(255,255,255,0.06);
+    --text: #F0F4FF;
+    --muted: #7080A0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,133,255,0.12) 0%, transparent 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-date {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--blue);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 7vw, 72px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .hero h1 span.pink { color: var(--pink); }
+  .hero h1 span.blue { color: var(--blue); }
+  .hero-sub {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 40px;
+    font-weight: 400;
+  }
+  .hero-bignum {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 40px;
+    margin: 0 8px;
+  }
+  .hero-bignum .num {
+    font-size: clamp(40px, 8vw, 80px);
+    font-weight: 900;
+    letter-spacing: -3px;
+    background: linear-gradient(135deg, var(--blue), var(--pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-bignum .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .hero-nums {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  /* SECTIONS */
+  .section {
+    max-width: 1100px;
+    margin: 60px auto 0;
+    padding: 0 24px;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .section-title {
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 32px;
+  }
+
+  /* GRID */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 700px) {
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px) {
+    .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card.full { grid-column: 1 / -1; }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-card .stat-num {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: -2px;
+  }
+  .stat-card .stat-num.blue { color: var(--blue); }
+  .stat-card .stat-num.pink { color: var(--pink); }
+  .stat-card .stat-num.gradient {
+    background: linear-gradient(135deg, var(--blue), var(--pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-card .stat-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .stat-card .stat-note {
+    font-size: 11px;
+    color: rgba(112,128,160,0.6);
+    margin-top: 2px;
+  }
+
+  /* VS BARS */
+  .vs-row {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .vs-item { }
+  .vs-item .vs-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px;
+  }
+  .vs-item .vs-bars {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .vs-person {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .vs-person .name {
+    font-size: 12px;
+    font-weight: 700;
+    width: 42px;
+    flex-shrink: 0;
+  }
+  .vs-person .name.allen { color: var(--blue); }
+  .vs-person .name.liya { color: var(--pink); }
+  .vs-bar-wrap {
+    flex: 1;
+    height: 28px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .vs-bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    transition: width 1s ease;
+    min-width: 40px;
+  }
+  .vs-bar.allen { background: linear-gradient(90deg, rgba(0,133,255,0.8), rgba(0,133,255,0.4)); }
+  .vs-bar.liya { background: linear-gradient(90deg, rgba(255,45,120,0.8), rgba(255,45,120,0.4)); }
+
+  /* CHART WRAPPER */
+  .chart-wrap {
+    position: relative;
+    height: 260px;
+  }
+
+  /* VERSUS BIG */
+  .versus-big {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .versus-side {
+    flex: 1;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .versus-side.allen-side { border-right: 1px solid var(--border); }
+  .versus-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .versus-name.allen { color: var(--blue); }
+  .versus-name.liya { color: var(--pink); }
+  .versus-num {
+    font-size: 48px;
+    font-weight: 900;
+    letter-spacing: -3px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .versus-num.allen { color: var(--blue); }
+  .versus-num.liya { color: var(--pink); }
+  .versus-desc { font-size: 13px; color: var(--muted); }
+  .versus-vs {
+    padding: 0 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* WORK ON */
+  .workon-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) { .workon-grid { grid-template-columns: 1fr; } }
+  .workon-card {
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border);
+  }
+  .workon-card.allen-card {
+    background: rgba(0,133,255,0.06);
+    border-color: rgba(0,133,255,0.2);
+  }
+  .workon-card.liya-card {
+    background: rgba(255,45,120,0.06);
+    border-color: rgba(255,45,120,0.2);
+  }
+  .workon-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .workon-name.allen { color: var(--blue); }
+  .workon-name.liya { color: var(--pink); }
+  .workon-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+  }
+  .workon-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+  .workon-dot.allen { background: var(--blue); }
+  .workon-dot.liya { background: var(--pink); }
+  .workon-text { font-size: 14px; line-height: 1.5; color: var(--text); }
+
+  /* FIRST TEXT */
+  .first-text {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+  }
+  .first-text .ft-date {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .ft-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+  .ft-bubble {
+    padding: 12px 18px;
+    border-radius: 18px;
+    font-size: 15px;
+    font-weight: 500;
+    max-width: 80%;
+  }
+  .ft-bubble.liya {
+    background: rgba(255,45,120,0.15);
+    border: 1px solid rgba(255,45,120,0.2);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .ft-bubble.allen {
+    background: rgba(0,133,255,0.15);
+    border: 1px solid rgba(0,133,255,0.2);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .ft-bubble-name {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    color: var(--muted);
+  }
+  .ft-note {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 20px;
+    font-style: italic;
+  }
+
+  /* FUN FACTS */
+  .fun-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .fun-fact {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 22px;
+  }
+  .fun-fact .ff-emoji { font-size: 28px; margin-bottom: 10px; }
+  .fun-fact .ff-text { font-size: 15px; font-weight: 500; line-height: 1.4; }
+  .fun-fact .ff-text strong { color: var(--blue); }
+  .fun-fact .ff-text strong.pink { color: var(--pink); }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 60px 24px 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .footer strong { color: var(--text); }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 60px 24px 0;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .versus-vs { padding: 0 10px; font-size: 10px; }
+    .versus-num { font-size: 36px; }
+    .versus-side { padding: 20px 16px; }
+    .hero-bignum { padding: 16px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-date">December 10, 2016 — Present</div>
+  <h1><span class="blue">Allen</span> & <span class="pink">Liya</span></h1>
+  <p class="hero-sub">9 years, 3 months, and counting. By the numbers.</p>
+  <div class="hero-nums">
+    <div class="hero-bignum">
+      <div class="num">226,051</div>
+      <div class="label">Total Messages</div>
+    </div>
+    <div class="hero-bignum">
+      <div class="num">9.3</div>
+      <div class="label">Years Together</div>
+    </div>
+    <div class="hero-bignum">
+      <div class="num">66</div>
+      <div class="label">Msgs / Day Avg</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT STARTED -->
+<div class="section">
+  <div class="section-label">Where it all began</div>
+  <div class="section-title">The First Texts 🌱</div>
+  <div class="first-text">
+    <div class="ft-date">December 10, 2016</div>
+    <div class="ft-bubble-wrap">
+      <div>
+        <div class="ft-bubble-name" style="text-align:left; padding-left:4px; color: #FF2D78;">Liya</div>
+        <div class="ft-bubble liya">Guess what?</div>
+      </div>
+      <div style="align-self:flex-end">
+        <div class="ft-bubble-name" style="text-align:right; padding-right:4px; color: #0085FF;">Allen</div>
+        <div class="ft-bubble allen">Hey!, what's up?</div>
+      </div>
+    </div>
+    <div class="ft-note">She made the first move. Still does, 62% of the time. 😄</div>
+  </div>
+</div>
+
+<!-- MESSAGE VOLUME -->
+<div class="section">
+  <div class="section-label">The Conversation</div>
+  <div class="section-title">Message Volume Over the Years 📊</div>
+  <div class="card full">
+    <div class="chart-wrap">
+      <canvas id="yearChart"></canvas>
+    </div>
+    <p style="font-size:12px; color: var(--muted); margin-top:16px; text-align:center;">
+      Peak was 2018 — new relationship energy is real. Things have settled since, life got busier. 2026 still in progress.
+    </p>
+  </div>
+</div>
+
+<!-- WHO DOES WHAT -->
+<div class="section">
+  <div class="section-label">The Score</div>
+  <div class="section-title">Who Does What More 🏆</div>
+  <div class="grid2">
+    <div class="versus-big">
+      <div class="versus-side allen-side">
+        <div class="versus-name allen">Allen</div>
+        <div class="versus-num allen">104,479</div>
+        <div class="versus-desc">messages sent</div>
+      </div>
+      <div class="versus-vs">vs</div>
+      <div class="versus-side">
+        <div class="versus-name liya">Liya</div>
+        <div class="versus-num liya">121,572</div>
+        <div class="versus-desc">messages sent</div>
+      </div>
+    </div>
+    <div class="versus-big">
+      <div class="versus-side allen-side">
+        <div class="versus-name allen">Allen</div>
+        <div class="versus-num allen">411</div>
+        <div class="versus-desc">times said "love you"</div>
+      </div>
+      <div class="versus-vs">vs</div>
+      <div class="versus-side">
+        <div class="versus-name liya">Liya</div>
+        <div class="versus-num liya">322</div>
+        <div class="versus-desc">times said "love you"</div>
+      </div>
+    </div>
+    <div class="card full">
+      <div class="vs-row">
+        <div class="vs-item">
+          <div class="vs-label">Who initiates conversations</div>
+          <div class="vs-bars">
+            <div class="vs-person">
+              <span class="name allen">Allen</span>
+              <div class="vs-bar-wrap"><div class="vs-bar allen" style="width:38%">38%</div></div>
+            </div>
+          </div>
+          <div class="vs-bars" style="margin-top:6px">
+            <div class="vs-person">
+              <span class="name liya">Liya</span>
+              <div class="vs-bar-wrap"><div class="vs-bar liya" style="width:62%">62%</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="vs-item">
+          <div class="vs-label">Times said "sorry"</div>
+          <div class="vs-bars">
+            <div class="vs-person">
+              <span class="name allen">Allen</span>
+              <div class="vs-bar-wrap"><div class="vs-bar allen" style="width:70%">1,157</div></div>
+            </div>
+          </div>
+          <div class="vs-bars" style="margin-top:6px">
+            <div class="vs-person">
+              <span class="name liya">Liya</span>
+              <div class="vs-bar-wrap"><div class="vs-bar liya" style="width:30%">492</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="vs-item">
+          <div class="vs-label">Food-related texts</div>
+          <div class="vs-bars">
+            <div class="vs-person">
+              <span class="name allen">Allen</span>
+              <div class="vs-bar-wrap"><div class="vs-bar allen" style="width:46%">7,323</div></div>
+            </div>
+          </div>
+          <div class="vs-bars" style="margin-top:6px">
+            <div class="vs-person">
+              <span class="name liya">Liya</span>
+              <div class="vs-bar-wrap"><div class="vs-bar liya" style="width:54%">8,585</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="vs-item">
+          <div class="vs-label">Avg response time</div>
+          <div class="vs-bars">
+            <div class="vs-person">
+              <span class="name allen">Allen</span>
+              <div class="vs-bar-wrap"><div class="vs-bar allen" style="width:54%">4.9 min</div></div>
+            </div>
+          </div>
+          <div class="vs-bars" style="margin-top:6px">
+            <div class="vs-person">
+              <span class="name liya">Liya</span>
+              <div class="vs-bar-wrap"><div class="vs-bar liya" style="width:46%">4.2 min</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEXTING HABITS -->
+<div class="section">
+  <div class="section-label">Daily Rhythm</div>
+  <div class="section-title">When You Text Most ⏰</div>
+  <div class="card full">
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="hourChart"></canvas>
+    </div>
+    <p style="font-size:12px; color: var(--muted); margin-top:16px; text-align:center;">
+      Peak hours: 11am–1pm. You're both midday texters. Late night activity picks up past midnight too — combined <strong style="color:var(--text)">3,656 texts</strong> sent between midnight and 4am over 9 years.
+    </p>
+  </div>
+</div>
+
+<!-- FUN FACTS -->
+<div class="section">
+  <div class="section-label">Miscellaneous</div>
+  <div class="section-title">Fun Facts 🎲</div>
+  <div class="fun-facts">
+    <div class="fun-fact">
+      <div class="ff-emoji">👶</div>
+      <div class="ff-text">Allen's #1 most used word: <strong>"baby"</strong> — said it <strong>4,986 times</strong></div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">🍕</div>
+      <div class="ff-text">Combined <strong>15,908 texts</strong> about food. You are a food couple and that's final.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">😔</div>
+      <div class="ff-text">Allen has said "sorry" <strong>2.4x more</strong> than Liya. Make of that what you will.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">❤️</div>
+      <div class="ff-text">Allen says "love you" more — <strong>411 vs 322</strong>. He's the softie, apparently.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">😂</div>
+      <div class="ff-text">Liya's top emoji: <strong>😂</strong>. Allen's: <strong>😊</strong>. She laughs more, he smiles more.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">😘</div>
+      <div class="ff-text"><strong>😘 kiss face</strong> appears 971 times combined. That's basically every 85th text.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">📉</div>
+      <div class="ff-text">Texts peaked in <strong>2018</strong> at 46k messages. Life happened. Still at 13k/year though.</div>
+    </div>
+    <div class="fun-fact">
+      <div class="ff-emoji">✍️</div>
+      <div class="ff-text">Allen writes <strong>16% longer messages</strong> on average — 35 chars vs Liya's 30.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- WORK ON -->
+<div class="section">
+  <div class="section-label">The Honest Part</div>
+  <div class="section-title">Things to Work On 🛠️</div>
+  <div class="workon-grid">
+    <div class="workon-card allen-card">
+      <div class="workon-name allen">Allen needs to</div>
+      <div class="workon-item">
+        <div class="workon-dot allen"></div>
+        <div class="workon-text"><strong>Stop reading without responding.</strong> "Seen" with silence is worse than not seeing it at all.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot allen"></div>
+        <div class="workon-text"><strong>Initiate more.</strong> She starts 62% of conversations. Flip that once in a while.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot allen"></div>
+        <div class="workon-text"><strong>Be decisive.</strong> "Whatever you want" from her means she's given up waiting for him to choose. Take the lead.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot allen"></div>
+        <div class="workon-text"><strong>Small gestures, consistently.</strong> Big moments matter less than showing up daily. She notices the little things.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot allen"></div>
+        <div class="workon-text"><strong>Follow up on things she shares.</strong> She sends food, videos, apartment links — she wants to know he saw them.</div>
+      </div>
+    </div>
+    <div class="workon-card liya-card">
+      <div class="workon-name liya">Liya needs to</div>
+      <div class="workon-item">
+        <div class="workon-dot liya"></div>
+        <div class="workon-text"><strong>Tell him what she actually wants.</strong> "Whatever you want" doesn't help him give her what she needs.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot liya"></div>
+        <div class="workon-text"><strong>Remember his constraints.</strong> Sales calls, back-to-back meetings — a slow response isn't always neglect.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot liya"></div>
+        <div class="workon-text"><strong>Say what's bothering her directly.</strong> "Cool story" lands harder than a conversation. He'd rather talk it out.</div>
+      </div>
+      <div class="workon-item">
+        <div class="workon-dot liya"></div>
+        <div class="workon-text"><strong>Let him plan things.</strong> When she steps back, he often steps up — give him the space to surprise her.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p style="font-size:22px; font-weight:800; letter-spacing:-1px; color:var(--text); margin-bottom:8px;">226,051 messages. Still going. 💙</p>
+  <p>Built with 9 years of iMessage data. And a little AI help. 🤖</p>
+  <p style="margin-top:8px; font-size:11px; opacity:0.4;">For Allen & Liya — March 2026</p>
+</div>
+
+<script>
+  // YEAR CHART
+  const yearCtx = document.getElementById('yearChart').getContext('2d');
+  new Chart(yearCtx, {
+    type: 'bar',
+    data: {
+      labels: ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'],
+      datasets: [
+        {
+          label: 'Allen',
+          data: [357, 15524, 22233, 15432, 13656, 10295, 11197, 8068, 7935, 6264],
+          backgroundColor: 'rgba(0,133,255,0.7)',
+          borderRadius: 4,
+        },
+        {
+          label: 'Liya',
+          data: [454, 17380, 24022, 16379, 16372, 12641, 14359, 10465, 9467, 8465],
+          backgroundColor: 'rgba(255,45,120,0.7)',
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#7080A0', font: { family: 'Inter', weight: '600' } } }
+      },
+      scales: {
+        x: { stacked: false, ticks: { color: '#7080A0' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#7080A0' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  // HOUR CHART
+  const hourCtx = document.getElementById('hourChart').getContext('2d');
+  const hours = Array.from({length:24}, (_,i) => `${i}:00`);
+  new Chart(hourCtx, {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: 'Allen',
+          data: [841,536,254,113,44,38,61,382,1487,5314,9889,12249,12863,12181,11440,9136,7844,6896,6255,4722,3412,2583,1669,1337],
+          borderColor: 'rgba(0,133,255,0.9)',
+          backgroundColor: 'rgba(0,133,255,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+        },
+        {
+          label: 'Liya',
+          data: [1147,719,295,124,61,39,81,509,1791,6359,12315,14706,15171,14467,13222,10582,9016,7743,6809,5232,3663,2965,2090,1860],
+          borderColor: 'rgba(255,45,120,0.9)',
+          backgroundColor: 'rgba(255,45,120,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#7080A0', font: { family: 'Inter', weight: '600' } } }
+      },
+      scales: {
+        x: { ticks: { color: '#7080A0', maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#7080A0' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+</script>
+</body>
+</html>

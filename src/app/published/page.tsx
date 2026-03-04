@@ -8,7 +8,7 @@ interface PublishedPost {
   bad_prompt: string;
   category: string;
   format: string;
-  video_url: string;
+  video_bad_url: string;
   published_at: string;
   instagram_media_id?: string;
 }
@@ -71,9 +71,9 @@ function PostCard({ post }: { post: PublishedPost }) {
   return (
     <div style={{ background: '#0B1220', border: '1px solid #1A2540', borderRadius: 16, overflow: 'hidden' }}>
       {/* Video */}
-      {post.video_url && (
+      {post.video_bad_url && (
         <video
-          src={post.video_url}
+          src={post.video_bad_url}
           muted
           loop
           autoPlay

@@ -10,9 +10,8 @@ const IG_TOKEN   = process.env.INSTAGRAM_ACCESS_TOKEN!;
 const GRAPH_BASE = 'https://graph.facebook.com/v19.0';
 
 const REEL_METRICS = [
-  'impressions', 'reach', 'plays', 'ig_reels_avg_watch_time',
-  'likes', 'comments', 'saved', 'shares',
-  'follows', 'profile_visits', 'total_interactions',
+  'reach', 'ig_reels_avg_watch_time', 'ig_reels_video_view_total_time',
+  'likes', 'comments', 'saved', 'shares', 'total_interactions',
 ].join(',');
 
 export async function GET(req: NextRequest) {
@@ -56,16 +55,13 @@ export async function GET(req: NextRequest) {
       mediaId,
       publishedAt: post.published_at,
       metrics: {
-        impressions:     raw.impressions     || 0,
         reach:           raw.reach           || 0,
-        plays:           raw.plays           || 0,
         avgWatchSec,
+        totalViewTimeSec: ((raw.ig_reels_video_view_total_time || 0) / 1000).toFixed(0),
         likes,
         comments,
         saves:           saved,
         shares,
-        profileVisits:   raw.profile_visits  || 0,
-        follows:         raw.follows         || 0,
         totalInteractions: raw.total_interactions || 0,
         engagementRate,
       },

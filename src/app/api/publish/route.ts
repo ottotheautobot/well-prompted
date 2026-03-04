@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create container', detail: res }, { status: 500 });
     }
 
+    // Store container ID so the cron can pick it up and finish publishing independently
+    await supabase.from('posts').update({ publish_error: `container:${res.id}` }).eq('id', id);
+
     return NextResponse.json({ step: 'check_container', container_id: res.id });
   }
 
@@ -112,11 +115,45 @@ export async function GET() {
     .from('posts').select('id').eq('status', 'scheduled')
     .lte('scheduled_at', now).not('video_bad_url', 'is', null);
 
-  if (!duePosts?.length) return NextResponse.json({ published: 0, message: 'No posts due' });
+  // Also pick up any stuck 'publishing' posts that have a stored container ID
+  const { data: stuckPosts } = await supabase
+    .from('posts').select('id, publish_error')
+    .eq('status', 'publishing')
+    .like('publish_error', 'container:%');
+
+  // Finish stuck posts first
+  const finishedResults = [];
+  for (const post of (stuckPosts || [])) {
+    const containerId = post.publish_error?.replace('container:', '');
+    if (!containerId) continue;
+    const status = await getStatus(containerId);
+    if (status !== 'FINISHED') { finishedResults.push({ id: post.id, status, skipped: true }); continue; }
+    const publishRes = await igPost(`${IG_ACCT}/media_publish`, { creation_id: containerId });
+    if (!publishRes.id) {
+      await supabase.from('posts').update({ status: 'scheduled', publish_error: `Publish failed: ${JSON.stringify(publishRes.error)}` }).eq('id', post.id);
+      finishedResults.push({ id: post.id, error: publishRes });
+      continue;
+    }
+    logFire('publish', 'info', `Published stuck post to Instagram`, { postId: post.id, mediaId: publishRes.id });
+    const { data: fullPost } = await supabase.from('posts').select('*').eq('id', post.id).single();
+    await supabase.from('posts').update({ status: 'published', published_at: new Date().toISOString(), instagram_media_id: publishRes.id, publish_error: null }).eq('id', post.id);
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: process.env.TELEGRAM_CHAT_ID, parse_mode: 'HTML',
+          text: `✅ <b>Published to Instagram!</b>\n\n"${(fullPost?.bad_prompt||'').slice(0,60)}..."\n\nhttps://instagram.com/well.prompted`,
+        }),
+      });
+    }
+    finishedResults.push({ id: post.id, mediaId: publishRes.id });
+  }
+
+  if (!duePosts?.length && !finishedResults.length) return NextResponse.json({ published: 0, message: 'No posts due' });
 
   const base = process.env.NEXT_PUBLIC_APP_URL || 'https://well-prompted-pi.vercel.app';
   const results = [];
-  for (const post of duePosts) {
+  for (const post of (duePosts || [])) {
     const res = await fetch(`${base}/api/publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.PORTAL_PASSWORD}` },
@@ -124,5 +161,5 @@ export async function GET() {
     });
     results.push({ id: post.id, ...(await res.json()) });
   }
-  return NextResponse.json({ kicked_off: results.length, results });
+  return NextResponse.json({ kicked_off: results.length, finished_stuck: finishedResults.length, results, finishedResults });
 }

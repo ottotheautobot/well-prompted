@@ -34,11 +34,36 @@ async function callClaude(prompt: string, maxTokens = 600): Promise<string> {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
-  const topicIndex = body.topic_index !== undefined
+  // Prevent duplicates: check existing tip list titles
+  const { data: existingTips } = await supabase
+    .from('posts')
+    .select('bad_prompt')
+    .eq('format', 'tip_list')
+    .catch(() => ({ data: [] }));
+  
+  const usedTitles = new Set(
+    (existingTips || []).map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
+  );
+
+  let topicIndex = body.topic_index !== undefined
     ? body.topic_index
     : Math.floor(Math.random() * TIP_TOPICS.length);
 
-  const topic = TIP_TOPICS[topicIndex % TIP_TOPICS.length];
+  let topic = TIP_TOPICS[topicIndex % TIP_TOPICS.length];
+  let attemptsLeft = TIP_TOPICS.length;
+
+  // Find first unused topic
+  while (attemptsLeft > 0 && usedTitles.has(topic.title.trim().toLowerCase())) {
+    topicIndex = (topicIndex + 1) % TIP_TOPICS.length;
+    topic = TIP_TOPICS[topicIndex];
+    attemptsLeft--;
+  }
+
+  if (attemptsLeft === 0) {
+    return NextResponse.json({
+      error: 'All tip list topics have already been generated. Add more to the TIP_TOPICS array.',
+    }, { status: 400 });
+  }
 
   try {
     const raw = await callClaude(`

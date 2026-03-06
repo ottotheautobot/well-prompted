@@ -244,17 +244,43 @@ const BASE_TAGS = '#promptengineering #chatgpt #aitools #productivity #prompttip
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
-  // Pick content item
+  // Prevent duplicates: filter out items already in database
+  const { data: existingPrompts } = await supabase
+    .from('posts')
+    .select('bad_prompt')
+    .eq('format', 'before_after')
+    .catch(() => ({ data: [] }));
+  
+  const usedPrompts = new Set(
+    (existingPrompts || []).map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
+  );
+
+  // Pick content item (avoiding duplicates)
   let item;
   if (body.matrix_id) {
     item = CONTENT_MATRIX.find(c => c.id === body.matrix_id);
   } else if (body.matrix_index !== undefined) {
     item = CONTENT_MATRIX[body.matrix_index % CONTENT_MATRIX.length];
   } else if (body.category) {
-    const filtered = CONTENT_MATRIX.filter(c => c.category === body.category);
+    const filtered = CONTENT_MATRIX.filter(
+      c => !usedPrompts.has(c.okay_prompt.trim().toLowerCase())
+    );
+    if (filtered.length === 0) {
+      return NextResponse.json({
+        error: 'All items in this category have been used. Generate from another category or reset database.',
+      }, { status: 400 });
+    }
     item = filtered[Math.floor(Math.random() * filtered.length)];
   } else {
-    item = CONTENT_MATRIX[Math.floor(Math.random() * CONTENT_MATRIX.length)];
+    const filtered = CONTENT_MATRIX.filter(
+      c => !usedPrompts.has(c.okay_prompt.trim().toLowerCase())
+    );
+    if (filtered.length === 0) {
+      return NextResponse.json({
+        error: 'All content matrix items have been used. Add more items or reset database.',
+      }, { status: 400 });
+    }
+    item = filtered[Math.floor(Math.random() * filtered.length)];
   }
 
   if (!item) return NextResponse.json({ error: 'No matching content item' }, { status: 400 });

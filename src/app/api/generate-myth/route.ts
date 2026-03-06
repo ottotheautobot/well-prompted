@@ -32,10 +32,40 @@ async function callClaude(prompt: string, maxTokens = 600): Promise<string> {
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-  const idx = body.myth_index !== undefined
+  
+  // Prevent duplicates: check if myth already exists
+  let idx = body.myth_index !== undefined
     ? body.myth_index % MYTHS.length
     : Math.floor(Math.random() * MYTHS.length);
-  const item = MYTHS[idx];
+  
+  let item = MYTHS[idx];
+  let attemptsLeft = MYTHS.length;
+  
+  while (attemptsLeft > 0) {
+    const { data: existingPost } = await supabase
+      .from('posts')
+      .select('id')
+      .eq('bad_prompt', item.myth)
+      .limit(1)
+      .single()
+      .catch(() => ({ data: null }));
+    
+    if (!existingPost) {
+      // Myth doesn't exist, safe to use
+      break;
+    }
+    
+    // Myth already exists, try next one
+    idx = (idx + 1) % MYTHS.length;
+    item = MYTHS[idx];
+    attemptsLeft--;
+  }
+  
+  if (attemptsLeft === 0) {
+    return NextResponse.json({
+      error: 'All myths have already been generated. Add more to the MYTHS array.',
+    }, { status: 400 });
+  }
 
   try {
     const raw = await callClaude(`

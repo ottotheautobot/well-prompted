@@ -1,9 +1,8 @@
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Easing, Audio, Img, staticFile } from 'remotion';
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Audio } from 'remotion';
 
 export interface MythBustVideoProps {
   mythStatement: string;
   truthStatement: string;
-  effect: 'busted_text' | 'shattering_glass' | 'slash' | 'explosion';
   audioUrl?: string;
   musicUrl?: string;
   musicStartSec?: number;
@@ -15,223 +14,186 @@ const BG    = '#080B14';
 const W     = 1080;
 const H     = 1920;
 
+// Timeline (in frames at 30fps)
+const MYTH_START = 0;
+const MYTH_END = 60; // 2s hold
+const BUST_START = 60;
+const BUST_END = 75; // 0.5s
+const TRUTH_START = 75;
+const TRUTH_SETTLE = 105; // 1s animation
+const NARRATION_STARTS_AT = 105; // When truth text settles
+
 export const MythBustVideo: React.FC<MythBustVideoProps> = ({
   mythStatement,
   truthStatement,
-  effect,
   audioUrl,
   musicUrl,
   musicStartSec = 0,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
   
-  // Timeline: myth (0-50), bust effect (50-100), truth (100+)
-  const mythEnd = 50;
-  const bustStart = 50;
-  const bustEnd = 100;
-  
-  const mythOp = interpolate(frame, [0, mythEnd - 20, mythEnd], [0, 1, 0], {
+  // ── MYTH STATEMENT ──
+  const mythOp = interpolate(frame, [MYTH_START, MYTH_END - 15, MYTH_END], [0, 1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const mythScale = interpolate(frame, [MYTH_END - 15, MYTH_END], [1, 0.8], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
   
-  const bustOp = interpolate(frame, [bustStart, bustEnd - 10, bustEnd], [0, 1, 0], {
+  // ── FLASH OVERLAY (RED BURST) ──
+  const flashOp = interpolate(frame, [BUST_START, BUST_START + 5, BUST_END], [0, 0.5, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
   
-  const truthOp = interpolate(frame, [bustEnd - 10, bustEnd], [0, 1], {
+  // ── BUSTED TEXT (SLIDES FROM RIGHT WITH SPRING) ──
+  const bustedProgress = spring({
+    frame: Math.max(0, frame - BUST_START),
+    config: { damping: 6, mass: 1, tension: 100 },
+    fps,
+  });
+  const bustedX = interpolate(bustedProgress, [0, 1], [200, 0]);
+  const bustedOp = interpolate(frame, [BUST_START, BUST_START + 5, BUST_END + 10], [0, 1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  // Effect-specific animations
-  const getBustAnimation = () => {
-    switch (effect) {
-      case 'busted_text':
-        return (
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <div style={{
-              fontSize: 180,
-              fontWeight: 900,
-              color: PINK,
-              letterSpacing: 8,
-              textShadow: `0 0 40px ${PINK}`,
-              transform: `scale(${interpolate(frame, [bustStart, bustEnd], [0, 1], { easing: Easing.out(Easing.cubic) })}) rotate(${interpolate(frame, [bustStart, bustEnd], [-15, 0], { easing: Easing.out(Easing.cubic) })}deg)`,
-            }}>
-              BUSTED
-            </div>
-          </div>
-        );
-      
-      case 'shattering_glass':
-        return (
-          <svg width="1080" height="1920" style={{ position: 'absolute', top: 0, left: 0 }}>
-            {/* Radial cracks from center */}
-            {Array.from({ length: 12 }).map((_, i) => {
-              const angle = (i / 12) * Math.PI * 2;
-              const scale = interpolate(frame, [bustStart, bustEnd], [0, 1.5], { easing: Easing.out(Easing.cubic) });
-              const x1 = 540;
-              const y1 = 960;
-              const x2 = 540 + Math.cos(angle) * 600 * scale;
-              const y2 = 960 + Math.sin(angle) * 600 * scale;
-              return (
-                <line
-                  key={i}
-                  x1={x1}
-                  y1={y1}
-                  x2={x2}
-                  y2={y2}
-                  stroke={PINK}
-                  strokeWidth={3}
-                  opacity={1}
-                />
-              );
-            })}
-            {/* Concentric circles */}
-            {Array.from({ length: 4 }).map((_, i) => {
-              const radius = 100 * (i + 1) * interpolate(frame, [bustStart, bustEnd], [0, 1.5], { easing: Easing.out(Easing.cubic) });
-              return (
-                <circle
-                  key={`circle-${i}`}
-                  cx={540}
-                  cy={960}
-                  r={radius}
-                  fill="none"
-                  stroke={PINK}
-                  strokeWidth={2}
-                  opacity={Math.max(0, 1 - i * 0.2)}
-                />
-              );
-            })}
-          </svg>
-        );
-      
-      case 'slash':
-        return (
-          <svg width="1080" height="1920" style={{ position: 'absolute', top: 0, left: 0 }}>
-            <line
-              x1={interpolate(frame, [bustStart, bustEnd], [0, 1080], { easing: Easing.out(Easing.cubic) })}
-              y1={interpolate(frame, [bustStart, bustEnd], [1920, 0], { easing: Easing.out(Easing.cubic) })}
-              x2={interpolate(frame, [bustStart, bustEnd], [1080, 0], { easing: Easing.out(Easing.cubic) })}
-              y2={interpolate(frame, [bustStart, bustEnd], [0, 1920], { easing: Easing.out(Easing.cubic) })}
-              stroke={PINK}
-              strokeWidth={16}
-              opacity={1}
-            />
-          </svg>
-        );
-      
-      case 'explosion':
-        return (
-          <div style={{ position: 'absolute', inset: 0 }}>
-            {Array.from({ length: 20 }).map((_, i) => {
-              const angle = (i / 20) * Math.PI * 2;
-              const distance = interpolate(frame, [bustStart, bustEnd], [0, 400], { easing: Easing.out(Easing.cubic) });
-              const x = 540 + Math.cos(angle) * distance;
-              const y = 960 + Math.sin(angle) * distance;
-              const size = 40 - (i % 5) * 8;
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position: 'absolute',
-                    left: x,
-                    top: y,
-                    width: size,
-                    height: size,
-                    background: i % 2 === 0 ? PINK : BLUE,
-                    borderRadius: '50%',
-                    opacity: Math.max(0, 1 - (frame - bustStart) / (bustEnd - bustStart) * 0.3),
-                  }}
-                />
-              );
-            })}
-          </div>
-        );
-      
-      default:
-        return null;
-    }
-  };
+  
+  // ── TRUTH STATEMENT (SLIDES UP FROM BOTTOM WITH SPRING) ──
+  const truthProgress = spring({
+    frame: Math.max(0, frame - TRUTH_START),
+    config: { damping: 7, mass: 1, tension: 90 },
+    fps,
+  });
+  const truthY = interpolate(truthProgress, [0, 1], [150, 0]);
+  const truthOp = interpolate(frame, [TRUTH_START, TRUTH_SETTLE - 5], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  
+  // ── ACCENT LINE (DRAWS LEFT TO RIGHT) ──
+  const lineDrawProgress = interpolate(frame, [TRUTH_SETTLE - 10, TRUTH_SETTLE + 20], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const lineLength = 300;
+  const lineDashOffset = lineLength * (1 - lineDrawProgress);
 
   return (
-    <AbsoluteFill style={{ background: BG }}>
-      {/* MYTH STATEMENT */}
-      <div
-        style={{
+    <AbsoluteFill style={{ background: BG, fontFamily: 'Inter, sans-serif', overflow: 'hidden' }}>
+      
+      {/* FLASH OVERLAY */}
+      {flashOp > 0 && (
+        <div style={{
           position: 'absolute',
           inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: mythOp,
+          background: PINK,
+          opacity: flashOp,
+          pointerEvents: 'none',
+          zIndex: 5,
+        }} />
+      )}
+      
+      {/* MYTH STATEMENT */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: mythOp,
+        zIndex: 2,
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          textAlign: 'center',
+          fontSize: 56,
+          fontWeight: 700,
+          color: '#E2E8F0',
+          lineHeight: 1.3,
+          maxWidth: 800,
+          transform: `scale(${mythScale})`,
           paddingLeft: 88,
           paddingRight: 88,
-          zIndex: 1,
-          pointerEvents: 'none',
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 56,
-            fontWeight: 700,
-            color: '#E2E8F0',
-            lineHeight: 1.3,
-            fontFamily: 'Inter, sans-serif',
-          }}
-        >
+        }}>
           {mythStatement}
         </div>
       </div>
-
-      {/* BUST EFFECT */}
-      <div style={{ opacity: bustOp, zIndex: 2, pointerEvents: 'none' }}>
-        {getBustAnimation()}
-      </div>
-
-      {/* TRUTH STATEMENT */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: truthOp,
-          paddingLeft: 88,
-          paddingRight: 88,
-          zIndex: 3,
-          pointerEvents: 'none',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              fontSize: 52,
-              fontWeight: 700,
-              color: BLUE,
-              lineHeight: 1.3,
-              marginBottom: 16,
-              fontFamily: 'Inter, sans-serif',
-            }}
-          >
-            {truthStatement}
-          </div>
+      
+      {/* BUSTED TEXT */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: bustedOp,
+        zIndex: 3,
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          fontSize: 72,
+          fontWeight: 900,
+          color: PINK,
+          letterSpacing: 4,
+          transform: `translateX(${bustedX}px)`,
+          textShadow: `0 0 30px ${PINK}80`,
+        }}>
+          ✕ BUSTED
         </div>
       </div>
-
+      
+      {/* TRUTH STATEMENT + ACCENT LINE */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: truthOp,
+        zIndex: 4,
+        pointerEvents: 'none',
+        transform: `translateY(${truthY}px)`,
+      }}>
+        <div style={{
+          textAlign: 'center',
+          paddingLeft: 88,
+          paddingRight: 88,
+        }}>
+          <div style={{
+            fontSize: 52,
+            fontWeight: 700,
+            color: BLUE,
+            lineHeight: 1.3,
+            maxWidth: 800,
+            marginBottom: 20,
+          }}>
+            {truthStatement}
+          </div>
+          
+          {/* Accent line underneath */}
+          <svg width="300" height="8" style={{ display: 'block', margin: '0 auto' }}>
+            <line
+              x1="0"
+              y1="4"
+              x2="300"
+              y2="4"
+              stroke={PINK}
+              strokeWidth="4"
+              strokeDasharray={`${lineLength} ${lineLength}`}
+              strokeDashoffset={lineDashOffset}
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+      </div>
+      
       {/* AUDIO */}
       {audioUrl && <Audio src={audioUrl} />}
       {musicUrl && <Audio src={musicUrl} startFrom={musicStartSec * fps} volume={0.3} />}
+      
     </AbsoluteFill>
   );
 };

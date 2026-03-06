@@ -57,14 +57,13 @@ const RemotionRoot: React.FC = () => {
       <Composition
         id="MythBustVideo"
         component={MythBustVideo as unknown as React.ComponentType<Record<string, unknown>>}
-        durationInFrames={FPS * 18}
+        durationInFrames={FPS * 20}
         fps={FPS}
         width={1080}
         height={1920}
         defaultProps={{
-          mythStatement: "Long detailed prompts always work better",
-          truthStatement: "Short and conversational does",
-          effect: "slash",
+          mythStatement: "You need system prompts for everything",
+          truthStatement: "Just tell it what you need",
         }}
       />
     </>

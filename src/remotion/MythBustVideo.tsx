@@ -57,7 +57,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
   // ── BUSTED TEXT (SLIDES FROM RIGHT WITH SPRING) ──
   const bustedProgress = spring({
     frame: Math.max(0, frame - BUST_START),
-    config: { damping: 6, mass: 1, tension: 100 },
+    config: { mass: 1, damping: 8 },
     fps,
   });
   const bustedX = interpolate(bustedProgress, [0, 1], [200, 0]);
@@ -69,7 +69,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
   // ── TRUTH STATEMENT (SLIDES UP FROM BOTTOM WITH SPRING) ──
   const truthProgress = spring({
     frame: Math.max(0, frame - TRUTH_START),
-    config: { damping: 7, mass: 1, tension: 90 },
+    config: { mass: 1, damping: 10 },
     fps,
   });
   const truthY = interpolate(truthProgress, [0, 1], [150, 0]);

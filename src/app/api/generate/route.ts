@@ -245,14 +245,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
   // Prevent duplicates: filter out ALL items already in database (including rejected)
-  const { data: existingPrompts } = await supabase
-    .from('posts')
-    .select('bad_prompt')
-    .eq('format', 'before_after')
-    .catch(() => ({ data: [] }));
+  let existingPrompts: any[] = [];
+  try {
+    const result = await supabase
+      .from('posts')
+      .select('bad_prompt')
+      .eq('format', 'before_after');
+    existingPrompts = result.data || [];
+  } catch (e) {
+    existingPrompts = [];
+  }
   
   const usedPrompts = new Set(
-    (existingPrompts || []).map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
+    existingPrompts.map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
   );
 
   // Pick content item (avoiding duplicates)

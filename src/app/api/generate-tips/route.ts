@@ -35,14 +35,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
   // Prevent duplicates: check ALL existing tip list titles (including rejected)
-  const { data: existingTips } = await supabase
-    .from('posts')
-    .select('bad_prompt')
-    .eq('format', 'tip_list')
-    .catch(() => ({ data: [] }));
+  let existingTips: any[] = [];
+  try {
+    const result = await supabase
+      .from('posts')
+      .select('bad_prompt')
+      .eq('format', 'tip_list');
+    existingTips = result.data || [];
+  } catch (e) {
+    existingTips = [];
+  }
   
   const usedTitles = new Set(
-    (existingTips || []).map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
+    existingTips.map((p: any) => p.bad_prompt?.trim().toLowerCase()).filter(Boolean)
   );
 
   let topicIndex = body.topic_index !== undefined

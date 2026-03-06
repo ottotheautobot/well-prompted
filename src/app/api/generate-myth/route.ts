@@ -42,16 +42,21 @@ export async function POST(req: NextRequest) {
   let attemptsLeft = MYTHS.length;
   
   while (attemptsLeft > 0) {
-    const { data: existingPost } = await supabase
-      .from('posts')
-      .select('id')
-      .eq('bad_prompt', item.myth)
-      .limit(1)
-      .single()
-      .catch(() => ({ data: null }));
-    
-    if (!existingPost) {
-      // Myth has never been generated (approved, rejected, or otherwise), safe to use
+    try {
+      const { data: existingPost, error } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('bad_prompt', item.myth)
+        .limit(1)
+        .single();
+      
+      if (error || !existingPost) {
+        // Myth doesn't exist, safe to use
+        break;
+      }
+      // Myth exists, try next one
+    } catch (e) {
+      // No row found, safe to use
       break;
     }
     

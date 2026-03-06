@@ -57,13 +57,13 @@ const RemotionRoot: React.FC = () => {
       <Composition
         id="MythBustVideo"
         component={MythBustVideo as unknown as React.ComponentType<Record<string, unknown>>}
-        durationInFrames={FPS * 20}
+        durationInFrames={FPS * 27}
         fps={FPS}
         width={1080}
         height={1920}
         defaultProps={{
-          mythStatement: "You need system prompts for everything",
-          truthStatement: "Just tell it what you need",
+          mythStatement: "ChatGPT and Claude work the same way, so prompts are interchangeable",
+          truthStatement: "They think differently. Adjust your prompts for each model.",
         }}
       />
     </>

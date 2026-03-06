@@ -16,12 +16,13 @@ const H     = 1920;
 
 // Timeline (in frames at 30fps)
 const MYTH_START = 0;
-const MYTH_END = 60; // 2s hold
-const BUST_START = 60;
-const BUST_END = 75; // 0.5s
-const TRUTH_START = 75;
-const TRUTH_SETTLE = 105; // 1s animation
-const NARRATION_STARTS_AT = 105; // When truth text settles
+const MYTH_SHOW_START = 15; // Let "MYTH:" appear first
+const MYTH_END = 105; // 3.5s hold (myth label + statement)
+const BUST_START = 105;
+const BUST_END = 120; // 0.5s
+const TRUTH_START = 120;
+const TRUTH_SETTLE = 165; // 1.5s animation with spring
+const NARRATION_STARTS_AT = 165; // When truth text settles
 
 export const MythBustVideo: React.FC<MythBustVideoProps> = ({
   mythStatement,
@@ -33,8 +34,12 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   
-  // ── MYTH STATEMENT ──
-  const mythOp = interpolate(frame, [MYTH_START, MYTH_END - 15, MYTH_END], [0, 1, 0], {
+  // ── MYTH STATEMENT + HEADING ──
+  const mythOp = interpolate(frame, [MYTH_START, MYTH_SHOW_START + 10, MYTH_END - 15, MYTH_END], [0, 1, 1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  const headingOp = interpolate(frame, [MYTH_START, MYTH_SHOW_START, MYTH_END - 15], [0, 1, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -56,7 +61,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
     fps,
   });
   const bustedX = interpolate(bustedProgress, [0, 1], [200, 0]);
-  const bustedOp = interpolate(frame, [BUST_START, BUST_START + 5, BUST_END + 10], [0, 1, 0], {
+  const bustedOp = interpolate(frame, [BUST_START, BUST_START + 5, BUST_END + 10, TRUTH_START], [0, 1, 1, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -68,13 +73,13 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
     fps,
   });
   const truthY = interpolate(truthProgress, [0, 1], [150, 0]);
-  const truthOp = interpolate(frame, [TRUTH_START, TRUTH_SETTLE - 5], [0, 1], {
+  const truthOp = interpolate(frame, [TRUTH_START, TRUTH_SETTLE - 15, TRUTH_SETTLE - 5], [0, 0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
   
   // ── ACCENT LINE (DRAWS LEFT TO RIGHT) ──
-  const lineDrawProgress = interpolate(frame, [TRUTH_SETTLE - 10, TRUTH_SETTLE + 20], [0, 1], {
+  const lineDrawProgress = interpolate(frame, [TRUTH_SETTLE - 5, TRUTH_SETTLE + 15], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -96,7 +101,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
         }} />
       )}
       
-      {/* MYTH STATEMENT */}
+      {/* MYTH STATEMENT WITH HEADING */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -109,16 +114,30 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
       }}>
         <div style={{
           textAlign: 'center',
-          fontSize: 56,
-          fontWeight: 700,
-          color: '#E2E8F0',
-          lineHeight: 1.3,
-          maxWidth: 800,
-          transform: `scale(${mythScale})`,
           paddingLeft: 88,
           paddingRight: 88,
+          maxWidth: 800,
+          transform: `scale(${mythScale})`,
         }}>
-          {mythStatement}
+          <div style={{
+            opacity: headingOp,
+            fontSize: 24,
+            fontWeight: 600,
+            color: PINK,
+            letterSpacing: 2,
+            marginBottom: 16,
+            textTransform: 'uppercase',
+          }}>
+            MYTH
+          </div>
+          <div style={{
+            fontSize: 56,
+            fontWeight: 700,
+            color: '#E2E8F0',
+            lineHeight: 1.3,
+          }}>
+            {mythStatement}
+          </div>
         </div>
       </div>
       

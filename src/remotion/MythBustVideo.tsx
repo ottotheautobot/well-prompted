@@ -1,4 +1,4 @@
-import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Audio } from 'remotion';
+import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig, Audio, Img, staticFile } from 'remotion';
 
 export interface MythBustVideoProps {
   mythStatement: string;
@@ -101,7 +101,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
         }} />
       )}
       
-      {/* MYTH STATEMENT WITH HEADING */}
+      {/* MYTH STATEMENT WITH LOGO + HEADING */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -119,6 +119,19 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
           maxWidth: 800,
           transform: `scale(${mythScale})`,
         }}>
+          <div style={{
+            marginBottom: 24,
+          }}>
+            <Img
+              src={staticFile('logo.png')}
+              style={{
+                height: 48,
+                width: 'auto',
+                objectFit: 'contain',
+                margin: '0 auto',
+              }}
+            />
+          </div>
           <div style={{
             opacity: headingOp,
             fontSize: 24,
@@ -160,7 +173,7 @@ export const MythBustVideo: React.FC<MythBustVideoProps> = ({
           transform: `translateX(${bustedX}px)`,
           textShadow: `0 0 30px ${PINK}80`,
         }}>
-          ✕ BUSTED
+          BUSTED
         </div>
       </div>
       

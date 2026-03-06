@@ -9,13 +9,13 @@ const supabase = createClient(
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const MYTHS = [
-  { myth: 'Longer prompts always get better results', category: 'technique' },
+  { myth: 'More words in your prompt produce better outputs', category: 'technique' },
   { myth: 'You need to say "please" and "thank you" to AI', category: 'technique' },
-  { myth: 'AI understands what you mean even if you\'re vague', category: 'technique' },
+  { myth: 'Vague requests produce the same quality as detailed ones', category: 'technique' },
   { myth: 'ChatGPT and Claude work the same way, so prompts are interchangeable', category: 'technique' },
-  { myth: 'The AI remembers your previous conversations', category: 'technique' },
-  { myth: 'More examples in your prompt always helps', category: 'technique' },
-  { myth: 'You can\'t tell AI what NOT to do', category: 'technique' },
+  { myth: 'ChatGPT automatically remembers your previous conversations', category: 'technique' },
+  { myth: 'The more examples you give, the better your output', category: 'technique' },
+  { myth: 'You cannot tell AI what NOT to do', category: 'technique' },
   { myth: 'AI outputs are always biased toward agreement', category: 'technique' },
   { myth: 'Prompt engineering is only for developers', category: 'general' },
   { myth: 'You need to re-explain everything every message', category: 'technique' },
@@ -78,8 +78,27 @@ You create myth-busting content for @well.prompted, an Instagram page teaching p
 
 MYTH TO BUST: "${item.myth}"
 
+CRITICAL RULES FOR myth_statement:
+1. Restate the myth as a CONCRETE, FALSIFIABLE CLAIM (not vague)
+2. Use present-tense verbs: produces, generates, requires, remembers, works
+3. Avoid absolute qualifiers (always, never, completely) UNLESS the myth itself uses them
+4. Be SPECIFIC: Name models (ChatGPT, Claude), specific outcomes, not generic language
+5. No vague adjectives: avoid "better", "helps", "works", "understand" — explain WHAT specifically
+6. Make it sound like a REAL belief a non-expert would hold
+7. If possible, include the misconception people have (not just the claim)
+
+EXAMPLES OF STRONG MYTHS:
+✓ "More words in your prompt produce better outputs"
+✓ "ChatGPT automatically remembers your previous conversations"
+✓ "You must use polite language when asking AI questions"
+
+EXAMPLES OF WEAK MYTHS (avoid these):
+✗ "AI understands what you mean" (vague verb "understand")
+✗ "Longer prompts always help" (undefined "help", too absolute)
+✗ "The AI remembers things" (generic, not specific)
+
 Generate a punchy myth bust post with:
-- myth_statement: the myth as a bold claim (how people say it) — 1 sentence
+- myth_statement: the myth restated clearly as a concrete claim (how people say it) — 1 sentence, follow rules above
 - reality: the actual truth — 2-3 sentences, specific and concrete
 - proof: a concrete example or comparison that proves the reality — 2-3 sentences
 - fix: what to do instead — 1-2 actionable sentences

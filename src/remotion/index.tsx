@@ -1,6 +1,7 @@
 import { Composition, registerRoot } from 'remotion';
 import { PromptVideo, calcVideoDuration } from './PromptVideo';
 import { TipCard } from './TipCard';
+import { MythBustVideo } from './MythBustVideo';
 
 const FPS = 30;
 
@@ -51,6 +52,19 @@ const RemotionRoot: React.FC = () => {
           totalTips: 5,
           category: 'productivity',
           accentStyle: 'blue' as const,
+        }}
+      />
+      <Composition
+        id="MythBustVideo"
+        component={MythBustVideo as unknown as React.ComponentType<Record<string, unknown>>}
+        durationInFrames={FPS * 18}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          mythStatement: "Long detailed prompts always work better",
+          truthStatement: "Short and conversational does",
+          effect: "slash",
         }}
       />
     </>

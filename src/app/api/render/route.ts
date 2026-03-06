@@ -23,29 +23,38 @@ export async function POST(req: NextRequest) {
   logFire('render', 'info', `Render started`, { postId: id, prompt: post.bad_prompt?.slice(0, 60) });
 
   try {
-    let whyBreakdown = [];
-    try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
+    // Determine composition based on format
+    const format = post.format || 'before_after';
+    let composition = 'PromptVideo';
+    let inputProps: Record<string, any> = {};
 
-    let audioUrl: string | undefined;
-    let totalAudioSec: number | undefined;
-    let musicUrl: string | undefined;
-    let musicStartSec: number | undefined;
-    try {
-      const audioData = JSON.parse(post.caption_good || '{}');
-      if (audioData.url) {
-        audioUrl      = audioData.url.split('?')[0]; // strip cache-bust param for Lambda
-        totalAudioSec = audioData.totalSec;
-        musicUrl      = audioData.musicUrl;
-        musicStartSec = audioData.musicStartSec;
-      }
-    } catch {}
+    if (format === 'myth_bust') {
+      composition = 'MythBustVideo';
+      inputProps = {
+        mythStatement: post.myth_statement,
+        truthStatement: post.truth_statement,
+        effect: post.myth_bust_effect || 'slash',
+      };
+    } else {
+      // before_after format (default)
+      let whyBreakdown = [];
+      try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
 
-    const render = await renderMediaOnLambda({
-      region: REGION,
-      functionName: FUNCTION_NAME,
-      serveUrl: SITE_URL,
-      composition: 'PromptVideo',
-      inputProps: {
+      let audioUrl: string | undefined;
+      let totalAudioSec: number | undefined;
+      let musicUrl: string | undefined;
+      let musicStartSec: number | undefined;
+      try {
+        const audioData = JSON.parse(post.caption_good || '{}');
+        if (audioData.url) {
+          audioUrl      = audioData.url.split('?')[0];
+          totalAudioSec = audioData.totalSec;
+          musicUrl      = audioData.musicUrl;
+          musicStartSec = audioData.musicStartSec;
+        }
+      } catch {}
+
+      inputProps = {
         okayPrompt: post.bad_prompt,
         wellPrompt: post.good_prompt,
         whyBreakdown,
@@ -53,7 +62,15 @@ export async function POST(req: NextRequest) {
         postNumber: post.post_number || 1,
         ...(audioUrl ? { audioUrl, totalAudioSec } : {}),
         ...(musicUrl ? { musicUrl, musicStartSec } : {}),
-      },
+      };
+    }
+
+    const render = await renderMediaOnLambda({
+      region: REGION,
+      functionName: FUNCTION_NAME,
+      serveUrl: SITE_URL,
+      composition,
+      inputProps,
       codec: 'h264',
       imageFormat: 'jpeg',
       maxRetries: 1,

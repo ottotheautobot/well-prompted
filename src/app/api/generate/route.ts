@@ -244,7 +244,7 @@ const BASE_TAGS = '#promptengineering #chatgpt #aitools #productivity #prompttip
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
-  // Prevent duplicates: filter out items already in database
+  // Prevent duplicates: filter out ALL items already in database (including rejected)
   const { data: existingPrompts } = await supabase
     .from('posts')
     .select('bad_prompt')

@@ -34,7 +34,7 @@ async function callClaude(prompt: string, maxTokens = 600): Promise<string> {
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
 
-  // Prevent duplicates: check existing tip list titles
+  // Prevent duplicates: check ALL existing tip list titles (including rejected)
   const { data: existingTips } = await supabase
     .from('posts')
     .select('bad_prompt')

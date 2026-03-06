@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
       .catch(() => ({ data: null }));
     
     if (!existingPost) {
-      // Myth doesn't exist, safe to use
+      // Myth has never been generated (approved, rejected, or otherwise), safe to use
       break;
     }
     

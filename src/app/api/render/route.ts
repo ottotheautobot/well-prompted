@@ -73,10 +73,10 @@ export async function POST(req: NextRequest) {
       inputProps,
       codec: 'h264',
       imageFormat: 'jpeg',
-      maxRetries: 1,
+      maxRetries: 3,
       outName: `${id}.mp4`,
       logLevel: 'error',
-      framesPerLambda: 300,
+      framesPerLambda: 500,
       concurrencyPerLambda: 1,
       downloadBehavior: { type: 'play-in-browser' },
     });

@@ -99,12 +99,14 @@ EXAMPLES OF WEAK MYTHS (avoid these):
 
 Generate a punchy myth bust post with:
 - myth_statement: the myth restated clearly as a concrete claim (how people say it) — 1 sentence, follow rules above
-- reality: the actual truth — 2-3 sentences, specific and concrete
+- reality: the actual truth — EXACTLY 30 WORDS MAX. Be concise, specific. This is the core truth that replaces the myth.
 - proof: a concrete example or comparison that proves the reality — 2-3 sentences
 - fix: what to do instead — 1-2 actionable sentences
 - caption: Instagram caption. Hook (5-8 words, calls out the myth). 2 short sentences on why people believe it and why they're wrong. End with "Save this."
 
 Tone: Smart, direct. Like a senior engineer correcting a misconception. No hedging. No "it depends."
+
+CRITICAL: reality must be EXACTLY 30 words or less. Count every word. Trim ruthlessly if needed.
 
 Return JSON only:
 {
@@ -112,11 +114,20 @@ Return JSON only:
   "reality": "...",
   "proof": "...",
   "fix": "...",
-  "caption": "..."
+  "caption": "...",
+  "realityWordCount": <number>
 }`, 700);
 
     const clean = raw.replace(/```json\n?|\n?```/g, '').trim();
     const data = JSON.parse(clean.slice(clean.indexOf('{'), clean.lastIndexOf('}') + 1));
+
+    // Validate reality field is ≤30 words
+    const realityWords = (data.reality || '').trim().split(/\s+/).length;
+    if (realityWords > 30) {
+      // Trim to 30 words
+      const trimmed = data.reality.trim().split(/\s+/).slice(0, 30).join(' ');
+      data.reality = trimmed;
+    }
 
     const content = JSON.stringify({
       myth_statement: data.myth_statement,

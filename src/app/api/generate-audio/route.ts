@@ -74,6 +74,129 @@ function calcVideoTimings(wellPrompt: string, whyBreakdown: {title:string;descri
   return { totalVideoDurationSec, totalTargetWords, p1TotalSec, p2StartSec, typingEndSec };
 }
 
+// ── MYTH BUST AUDIO GENERATION ──
+async function generateMythBustAudio(post: any, id: string) {
+  const mythStatement = post.myth_statement || post.bad_prompt;
+  const truthStatement = post.truth_statement || post.good_prompt;
+  
+  // Myth bust video structure:
+  // 0-3.5s: MYTH heading + statement
+  // 3.5-5.5s: Flash + BUSTED text animation
+  // 5.5-27s: Truth statement + narration
+  const MYTH_DURATION = 3.5;
+  const BUST_DURATION = 2;
+  const TRUTH_START = MYTH_DURATION + BUST_DURATION;
+  const TOTAL_VIDEO_SEC = 27;
+  const NARRATION_START = TRUTH_START;
+  const AVAILABLE_NARRATION_SEC = TOTAL_VIDEO_SEC - NARRATION_START;
+
+  // At speed 1.1, ~165 wpm. Target ~21s of speech for 21.5s available
+  const TARGET_WORDS = Math.round((AVAILABLE_NARRATION_SEC - 1) * 2.5);
+
+  // Myth bust closers (different from before/after)
+  const MYTH_CLOSERS = [
+    'Save this one.',
+    'Now you know.',
+    'Try it next time.',
+    'This changes things.',
+    'Worth remembering.',
+    'Keep this saved.',
+    'That is the fix.',
+    'Simple but critical.',
+  ];
+  const closer = MYTH_CLOSERS[id.charCodeAt(0) % MYTH_CLOSERS.length];
+
+  const narrationRaw = await anthropic.messages.create({
+    model: 'claude-haiku-4-5', max_tokens: 500,
+    messages: [{
+      role: 'user',
+      content: `Write a voiceover narration for a myth-busting Instagram Reel about prompt engineering.
+
+MYTH (FALSE): "${mythStatement}"
+TRUTH (CORRECT): "${truthStatement}"
+
+VIDEO STRUCTURE:
+- 0-3.5s: Viewer sees the myth statement on screen (white text, centered)
+- 3.5-5.5s: Flash effect + "BUSTED" text bounces in
+- 5.5-27s: Truth statement appears and holds while narration plays (21.5s of narration time)
+
+Your narration plays during the entire video (0-27s total) but should:
+1. First (0-5.5s, during myth reveal): Call out the myth in a direct, skeptical tone. Don't hedge — this is wrong and people believe it.
+2. Transition (5.5s, as truth appears): Flip immediately to the reality. Use a clear pivot.
+3. Fill remaining time (5.5-27s, 21.5s): Explain WHY the truth matters, give one concrete example or comparison, make it memorable.
+
+SCRIPT REQUIREMENTS:
+- Exactly ${TARGET_WORDS} words (critical for pacing)
+- Open with a skeptical hook that names the myth directly
+- One sharp example that proves the truth
+- Close with: "${closer}" (word-for-word)
+- Warm but direct. Smart colleague explaining a mistake. No hedging ("sometimes," "it depends").
+- No exclamation points. Fragments are fine.
+- Include 2-3 <break time="0.5s"/> SSML tags at natural pause points (after myth callout, before truth explanation, before closer)
+- Do NOT count SSML tags in word count
+
+Return JSON only:
+{"script": "...", "wordCount": <number>}`,
+    }],
+  });
+
+  const raw = narrationRaw.content[0].type === 'text' ? narrationRaw.content[0].text : '';
+  let narration = { script: '' };
+  try {
+    const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
+    narration = JSON.parse(raw.slice(s, e + 1));
+  } catch {
+    return NextResponse.json({ error: 'Failed to parse myth narration' }, { status: 500 });
+  }
+
+  const fullScript = narration.script;
+
+  // ElevenLabs TTS
+  const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE}`, {
+    method: 'POST',
+    headers: { 'xi-api-key': ELEVENLABS_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text: fullScript,
+      model_id: 'eleven_turbo_v2_5',
+      speed: SPEECH_SPEED,
+      enable_ssml_parsing: true,
+      voice_settings: { stability: 0.48, similarity_boost: 0.82, style: 0.12, use_speaker_boost: true },
+    }),
+  });
+  if (!ttsRes.ok) {
+    const err = await ttsRes.text();
+    return NextResponse.json({ error: `ElevenLabs error: ${err}` }, { status: 500 });
+  }
+
+  const buf = Buffer.from(await ttsRes.arrayBuffer());
+
+  // Upload to S3
+  await s3.send(new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: `audio/${id}.mp3`,
+    Body: buf,
+    ContentType: 'audio/mpeg',
+  }));
+
+  const actualDurationSec = mp3DurationSec(buf);
+  const music = pickMusic(id);
+  const audioData = {
+    url: `https://s3.us-east-2.amazonaws.com/${S3_BUCKET}/audio/${id}.mp3?v=${Date.now()}`,
+    totalSec: actualDurationSec,
+    totalVideoDurationSec: TOTAL_VIDEO_SEC,
+    script: narration.script,
+    musicUrl: music.url,
+    musicStartSec: music.startFrom,
+    musicName: music.name,
+  };
+
+  // Save to DB in caption_good
+  await supabase.from('posts').update({ caption_good: JSON.stringify(audioData) }).eq('id', id);
+
+  logFire('audio', 'info', `Myth bust audio generated`, { postId: id, duration: actualDurationSec });
+  return NextResponse.json({ success: true, ...audioData });
+}
+
 export async function POST(req: NextRequest) {
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: 'Missing post id' }, { status: 400 });
@@ -81,6 +204,14 @@ export async function POST(req: NextRequest) {
   const { data: post } = await supabase.from('posts').select('*').eq('id', id).single();
   if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 });
 
+  const format = post.format || 'before_after';
+
+  // MYTH BUST FORMAT
+  if (format === 'myth_bust') {
+    return await generateMythBustAudio(post, id);
+  }
+
+  // BEFORE/AFTER FORMAT (existing logic below)
   let whyBreakdown: { title: string; description: string }[] = [];
   try { whyBreakdown = JSON.parse(post.good_output || '[]'); } catch {}
 
